@@ -1,0 +1,3579 @@
+
+<script>
+
+/* =========================================================
+   MIW MESSENGER V2
+   CLIENT APPLICATION
+========================================================= */
+
+
+/* =========================================================
+   1. APPLICATION STATE
+========================================================= */
+
+const MIWClient = {
+
+  token: sessionStorage.getItem('MIW_SESSION') || '',
+
+  user: null,
+
+  conversations: [],
+
+  activeConversation: null,
+
+  messages: [],
+
+  contacts: [],
+
+  groups: [],
+
+  communities: [],
+
+  files: [],
+
+  replyToMessage: null,
+
+  currentView: 'chats',
+
+  chatFilter: 'all',
+
+  pollingTimer: null,
+
+  pollingBusy: false,
+
+  lastMessageTimestamp: '',
+
+  isLoadingMessages: false,
+
+  loadingOlder: false,
+
+  theme: 'system'
+
+};
+
+
+/* =========================================================
+   2. DOM HELPERS
+========================================================= */
+
+function $(id) {
+
+  return document.getElementById(id);
+
+}
+
+
+function show(element) {
+
+  if (typeof element === 'string') {
+    element = $(element);
+  }
+
+  if (element) {
+    element.classList.remove('hidden');
+  }
+
+}
+
+
+function hide(element) {
+
+  if (typeof element === 'string') {
+    element = $(element);
+  }
+
+  if (element) {
+    element.classList.add('hidden');
+  }
+
+}
+
+
+function setText(id, value) {
+
+  const element = $(id);
+
+  if (element) {
+
+    element.textContent =
+      value === null || value === undefined
+        ? ''
+        : String(value);
+
+  }
+
+}
+
+
+function escapeHTML(value) {
+
+  return String(value || '').replace(
+    /[&<>"']/g,
+    function(character) {
+
+      const map = {
+
+        '&': '&amp;',
+
+        '<': '&lt;',
+
+        '>': '&gt;',
+
+        '"': '&quot;',
+
+        "'": '&#39;'
+
+      };
+
+      return map[character];
+
+    }
+  );
+
+}
+
+
+function getInitial(name) {
+
+  return String(name || 'U')
+    .trim()
+    .charAt(0)
+    .toUpperCase();
+
+}
+
+
+function formatTime(value) {
+
+  if (!value) return '';
+
+  const date = new Date(value);
+
+  if (isNaN(date.getTime())) {
+    return '';
+  }
+
+  return date.toLocaleTimeString('id-ID', {
+
+    hour: '2-digit',
+
+    minute: '2-digit'
+
+  });
+
+}
+
+
+function formatDate(value) {
+
+  if (!value) return '';
+
+  const date = new Date(value);
+
+  if (isNaN(date.getTime())) {
+    return '';
+  }
+
+  return date.toLocaleDateString('id-ID', {
+
+    day: 'numeric',
+
+    month: 'short',
+
+    year: 'numeric'
+
+  });
+
+}
+
+
+function formatFileSize(bytes) {
+
+  bytes = Number(bytes) || 0;
+
+  if (bytes < 1024) {
+    return bytes + ' B';
+  }
+
+  if (bytes < 1024 * 1024) {
+    return (bytes / 1024).toFixed(1) + ' KB';
+  }
+
+  return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+
+}
+
+
+function getErrorMessage(error) {
+
+  return error && error.message
+    ? error.message
+    : 'Terjadi kesalahan. Silakan coba kembali.';
+
+}
+
+
+/* =========================================================
+   3. API CONNECTION
+========================================================= */
+
+function api(action, payload = {}, tokenOverride) {
+
+  const token = tokenOverride !== undefined
+    ? tokenOverride
+    : MIWClient.token;
+
+  return new Promise(function(resolve, reject) {
+
+    if (
+      !window.google ||
+      !google.script ||
+      !google.script.run
+    ) {
+
+      reject(
+        new Error(
+          'MIW harus dibuka melalui URL Google Apps Script Web App.'
+        )
+      );
+
+      return;
+
+    }
+
+    google.script.run
+
+      .withSuccessHandler(function(response) {
+
+        if (!response) {
+
+          reject(
+            new Error('Server tidak memberikan respons.')
+          );
+
+          return;
+
+        }
+
+        if (!response.success) {
+
+          reject(
+            new Error(
+              response.message || 'Request gagal.'
+            )
+          );
+
+          return;
+
+        }
+
+        resolve(response.data);
+
+      })
+
+      .withFailureHandler(function(error) {
+
+        reject(error);
+
+      })
+
+      .miwApi(
+        token,
+        action,
+        payload
+      );
+
+  });
+
+}
+
+
+/* =========================================================
+   4. TOAST NOTIFICATION
+========================================================= */
+
+function toast(message, type = 'success') {
+
+  const container = $('toastContainer');
+
+  if (!container) return;
+
+  const element = document.createElement('div');
+
+  element.className = 'toast ' + type;
+
+  element.textContent = message;
+
+  container.appendChild(element);
+
+  setTimeout(function() {
+
+    element.remove();
+
+  }, 3500);
+
+}
+
+
+/* =========================================================
+   5. MODAL
+========================================================= */
+
+function openModal(title, content, actions = []) {
+
+  setText('modalTitle', title);
+
+  const contentContainer = $('modalContent');
+
+  const actionsContainer = $('modalActions');
+
+  contentContainer.replaceChildren();
+
+  actionsContainer.replaceChildren();
+
+  if (typeof content === 'string') {
+
+    contentContainer.textContent = content;
+
+  } else if (content instanceof Node) {
+
+    contentContainer.appendChild(content);
+
+  }
+
+  actions.forEach(function(action) {
+
+    const button = document.createElement('button');
+
+    button.type = 'button';
+
+    button.className =
+      action.primary
+        ? 'primary-button'
+        : 'secondary-button';
+
+    button.textContent = action.label;
+
+    button.addEventListener('click', function() {
+
+      if (action.onClick) {
+        action.onClick();
+      }
+
+    });
+
+    actionsContainer.appendChild(button);
+
+  });
+
+  show('modalBackdrop');
+
+}
+
+
+function closeModal() {
+
+  hide('modalBackdrop');
+
+  $('modalContent').replaceChildren();
+
+  $('modalActions').replaceChildren();
+
+}
+
+
+/* =========================================================
+   6. LOADING BUTTON
+========================================================= */
+
+function setButtonLoading(buttonId, loading) {
+
+  const button = $(buttonId);
+
+  if (!button) return;
+
+  button.disabled = loading;
+
+  const text = button.querySelector('.button-text');
+
+  const spinner = button.querySelector('.button-loader');
+
+  if (text) {
+
+    text.style.display = loading
+      ? 'none'
+      : 'inline';
+
+  }
+
+  if (spinner) {
+
+    spinner.classList.toggle(
+      'hidden',
+      !loading
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   7. AUTHENTICATION
+========================================================= */
+
+async function login(email, password) {
+
+  setButtonLoading('loginButton', true);
+
+  hide('loginError');
+
+  try {
+
+    const result = await api(
+      'login',
+      {
+        email: email,
+        password: password
+      },
+      ''
+    );
+
+    const token =
+      result.token ||
+      result.sessionToken ||
+      result.session ||
+      '';
+
+    if (!token) {
+
+      throw new Error(
+        'Token login tidak ditemukan pada respons backend.'
+      );
+
+    }
+
+    MIWClient.token = token;
+
+    sessionStorage.setItem(
+      'MIW_SESSION',
+      token
+    );
+
+    await initializeAuthenticatedApp();
+
+  } catch (error) {
+
+    setText(
+      'loginError',
+      getErrorMessage(error)
+    );
+
+    show('loginError');
+
+  } finally {
+
+    setButtonLoading('loginButton', false);
+
+  }
+
+}
+
+
+async function register(displayName, email, password) {
+
+  setButtonLoading('registerButton', true);
+
+  hide('registerError');
+
+  hide('registerSuccess');
+
+  try {
+
+    const result = await api(
+      'register',
+      {
+        displayName: displayName,
+        email: email,
+        password: password
+      },
+      ''
+    );
+
+    const token =
+      result.token ||
+      result.sessionToken ||
+      '';
+
+    if (token) {
+
+      MIWClient.token = token;
+
+      sessionStorage.setItem(
+        'MIW_SESSION',
+        token
+      );
+
+      await initializeAuthenticatedApp();
+
+    } else {
+
+      setText(
+        'registerSuccess',
+        'Akun berhasil dibuat. Silakan login.'
+      );
+
+      show('registerSuccess');
+
+      showLoginForm();
+
+    }
+
+  } catch (error) {
+
+    setText(
+      'registerError',
+      getErrorMessage(error)
+    );
+
+    show('registerError');
+
+  } finally {
+
+    setButtonLoading('registerButton', false);
+
+  }
+
+}
+
+
+async function logout() {
+
+  stopPolling();
+
+  try {
+
+    await api('logout');
+
+  } catch (error) {
+
+    console.warn(error);
+
+  }
+
+  MIWClient.token = '';
+
+  MIWClient.user = null;
+
+  sessionStorage.removeItem('MIW_SESSION');
+
+  MIWClient.activeConversation = null;
+
+  show('authScreen');
+
+  hide('appScreen');
+
+  showLoginForm();
+
+  toast('Anda telah keluar dari MIW.');
+
+}
+
+
+function showLoginForm() {
+
+  show('loginForm');
+
+  hide('registerForm');
+
+}
+
+
+function showRegisterForm() {
+
+  hide('loginForm');
+
+  show('registerForm');
+
+}
+
+
+/* =========================================================
+   8. AUTHENTICATED INITIALIZATION
+========================================================= */
+
+async function initializeAuthenticatedApp() {
+
+  try {
+
+    const user = await api('getCurrentUser');
+
+    MIWClient.user = user;
+
+    hide('loadingScreen');
+
+    hide('authScreen');
+
+    show('appScreen');
+
+    renderUserProfile(user);
+
+    await loadConversations();
+
+    startPolling();
+
+  } catch (error) {
+
+    console.error(error);
+
+    MIWClient.token = '';
+
+    sessionStorage.removeItem('MIW_SESSION');
+
+    show('authScreen');
+
+    hide('appScreen');
+
+    showLoginForm();
+
+    toast(
+      'Sesi tidak valid. Silakan login kembali.',
+      'error'
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   9. PROFILE
+========================================================= */
+
+function renderUserProfile(user) {
+
+  if (!user) return;
+
+  const name =
+    user.displayName ||
+    user.name ||
+    'User';
+
+  const miwId =
+    user.miwId ||
+    'MIW-XXXX-XXXX-XXXX';
+
+  setText('sidebarUserName', name);
+
+  setText('sidebarUserMiwId', miwId);
+
+  setText('sidebarUserInitial', getInitial(name));
+
+  setText('topbarUserInitial', getInitial(name));
+
+  setText('profileInitial', getInitial(name));
+
+  setText('profileDisplayName', name);
+
+  setText('profileMiwId', miwId);
+
+  setText('profileBio', user.bio || 'No bio available.');
+
+  $('profileNameInput').value = name;
+
+  $('profileBioInput').value = user.bio || '';
+
+}
+
+
+async function loadMyProfile() {
+
+  const profile = await api('getMyProfile');
+
+  MIWClient.user = profile;
+
+  renderUserProfile(profile);
+
+  const photoFileId = profile.profilePhotoFileId;
+
+  if (photoFileId) {
+
+    try {
+
+      const result = await api(
+        'getProfilePhoto',
+        {
+          userId: profile.userId
+        }
+      );
+
+      if (result && result.dataUrl) {
+
+        renderProfilePhoto(result.dataUrl);
+
+      } else if (typeof result === 'string') {
+
+        renderProfilePhoto(result);
+
+      }
+
+    } catch (error) {
+
+      console.warn('Profile photo:', error);
+
+    }
+
+  }
+
+}
+
+
+function renderProfilePhoto(dataUrl) {
+
+  [
+    'sidebarUserPhoto',
+    'topbarUserPhoto',
+    'profilePhoto'
+  ].forEach(function(id) {
+
+    const image = $(id);
+
+    if (!image) return;
+
+    image.src = dataUrl;
+
+    show(image);
+
+  });
+
+  hide('sidebarUserInitial');
+
+  hide('topbarUserInitial');
+
+  hide('profileInitial');
+
+}
+
+
+async function saveProfile(event) {
+
+  event.preventDefault();
+
+  try {
+
+    const name = $('profileNameInput').value.trim();
+
+    const bio = $('profileBioInput').value.trim();
+
+    await api(
+      'updateDisplayName',
+      {
+        displayName: name
+      }
+    );
+
+    await api(
+      'updateBio',
+      {
+        bio: bio
+      }
+    );
+
+    const photo = $('profilePhotoInput').files[0];
+
+    if (photo) {
+
+      if (photo.size > 2 * 1024 * 1024) {
+
+        throw new Error(
+          'Foto profil maksimal 2 MB.'
+        );
+
+      }
+
+      const base64 = await fileToBase64(photo);
+
+      await api(
+        'uploadProfilePhoto',
+        {
+          fileName: photo.name,
+          mimeType: photo.type,
+          base64Data: base64
+        }
+      );
+
+    }
+
+    await loadMyProfile();
+
+    toast('Profil berhasil diperbarui.');
+
+  } catch (error) {
+
+    toast(
+      getErrorMessage(error),
+      'error'
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   10. FILE READER
+========================================================= */
+
+function fileToBase64(file) {
+
+  return new Promise(function(resolve, reject) {
+
+    const reader = new FileReader();
+
+    reader.onload = function() {
+
+      const result = String(reader.result || '');
+
+      resolve(
+        result.split('base64,').pop()
+      );
+
+    };
+
+    reader.onerror = function() {
+
+      reject(
+        new Error('Gagal membaca file.')
+      );
+
+    };
+
+    reader.readAsDataURL(file);
+
+  });
+
+}
+
+
+/* =========================================================
+   11. NAVIGATION
+========================================================= */
+
+const viewTitles = {
+
+  chats: 'Messages',
+
+  contacts: 'Contacts',
+
+  groups: 'Groups',
+
+  communities: 'Communities',
+
+  drive: 'MIW Drive',
+
+  profile: 'My Profile',
+
+  settings: 'Settings'
+
+};
+
+
+function navigate(view) {
+
+  if (!viewTitles[view]) return;
+
+  MIWClient.currentView = view;
+
+  document.querySelectorAll('[data-view]').forEach(
+    function(button) {
+
+      button.classList.toggle(
+        'active',
+        button.dataset.view === view
+      );
+
+    }
+  );
+
+  Object.keys(viewTitles).forEach(function(key) {
+
+    const element = $(key + 'View');
+
+    if (element) {
+
+      element.classList.toggle(
+        'hidden',
+        key !== view
+      );
+
+    }
+
+  });
+
+  setText(
+    'currentPageTitle',
+    viewTitles[view]
+  );
+
+  closeMobileSidebar();
+
+  if (view === 'chats') loadConversations();
+
+  if (view === 'contacts') loadContacts();
+
+  if (view === 'groups') loadGroups();
+
+  if (view === 'communities') loadCommunities();
+
+  if (view === 'drive') loadDrive();
+
+  if (view === 'profile') loadMyProfile();
+
+}
+
+
+/* =========================================================
+   12. MOBILE SIDEBAR
+========================================================= */
+
+function openMobileSidebar() {
+
+  $('sidebar').classList.add('open');
+
+  show('sidebarBackdrop');
+
+}
+
+
+function closeMobileSidebar() {
+
+  $('sidebar').classList.remove('open');
+
+  hide('sidebarBackdrop');
+
+}
+
+
+/* =========================================================
+   13. CONVERSATIONS
+========================================================= */
+
+async function loadConversations() {
+
+  try {
+
+    const result = await api('getConversations');
+
+    const conversations = Array.isArray(result)
+      ? result
+      : result.conversations || [];
+
+    MIWClient.conversations = conversations;
+
+    renderConversations();
+
+  } catch (error) {
+
+    console.error(error);
+
+    toast(
+      getErrorMessage(error),
+      'error'
+    );
+
+  }
+
+}
+
+
+function getConversationName(conversation) {
+
+  return (
+    conversation.title ||
+    conversation.displayName ||
+    conversation.name ||
+    'Conversation'
+  );
+
+}
+
+
+function renderConversations() {
+
+  const container = $('conversationList');
+
+  container.replaceChildren();
+
+  let conversations = MIWClient.conversations.slice();
+
+  const search = (
+    $('chatSearch').value || ''
+  ).toLowerCase();
+
+  if (MIWClient.chatFilter === 'groups') {
+
+    conversations = conversations.filter(function(item) {
+
+      return item.type === 'group';
+
+    });
+
+  }
+
+  if (MIWClient.chatFilter === 'unread') {
+
+    conversations = conversations.filter(function(item) {
+
+      return Number(item.unreadCount) > 0;
+
+    });
+
+  }
+
+  if (search) {
+
+    conversations = conversations.filter(function(item) {
+
+      return getConversationName(item)
+        .toLowerCase()
+        .includes(search);
+
+    });
+
+  }
+
+  if (!conversations.length) {
+
+    const empty = document.createElement('div');
+
+    empty.className = 'empty-list-state';
+
+    empty.textContent = 'No conversations found.';
+
+    container.appendChild(empty);
+
+    return;
+
+  }
+
+  conversations.forEach(function(conversation) {
+
+    const template = $('conversationTemplate');
+
+    const fragment = template.content.cloneNode(true);
+
+    const element = fragment.querySelector('.conversation-item');
+
+    element.dataset.conversationId =
+      conversation.conversationId;
+
+    const name = getConversationName(conversation);
+
+    fragment.querySelector('.conversation-name')
+      .textContent = name;
+
+    fragment.querySelector('.conversation-preview')
+      .textContent =
+        conversation.lastMessage ||
+        conversation.lastMessageBody ||
+        'Start a conversation';
+
+    fragment.querySelector('.conversation-time')
+      .textContent = formatTime(
+        conversation.updatedAt
+      );
+
+    fragment.querySelector('.conversation-initial')
+      .textContent = getInitial(name);
+
+    const unread = Number(
+      conversation.unreadCount || 0
+    );
+
+    if (unread > 0) {
+
+      const badge = fragment.querySelector('.unread-count');
+
+      badge.textContent = unread;
+
+      show(badge);
+
+    }
+
+    if (
+      MIWClient.activeConversation &&
+      MIWClient.activeConversation.conversationId ===
+        conversation.conversationId
+    ) {
+
+      element.classList.add('active');
+
+    }
+
+    element.addEventListener('click', function() {
+
+      openConversation(conversation);
+
+    });
+
+    container.appendChild(fragment);
+
+  });
+
+}
+
+
+/* =========================================================
+   14. OPEN CONVERSATION
+========================================================= */
+
+async function openConversation(conversation) {
+
+  MIWClient.activeConversation = conversation;
+
+  MIWClient.messages = [];
+
+  MIWClient.lastMessageTimestamp = '';
+
+  const name = getConversationName(conversation);
+
+  setText('chatHeaderName', name);
+
+  setText(
+    'chatHeaderSubtitle',
+    conversation.type === 'group'
+      ? 'Group conversation'
+      : 'MIW Messenger'
+  );
+
+  setText(
+    'chatHeaderInitial',
+    getInitial(name)
+  );
+
+  show('activeConversation');
+
+  hide('emptyConversation');
+
+  $('chatsView').classList.add('chat-open');
+
+  $('messageList').replaceChildren();
+
+  show('messageLoading');
+
+  hide('messageEmptyState');
+
+  try {
+
+    await loadMessages();
+
+    $('messageContainer').scrollTop =
+      $('messageContainer').scrollHeight;
+
+  } catch (error) {
+
+    toast(
+      getErrorMessage(error),
+      'error'
+    );
+
+  } finally {
+
+    hide('messageLoading');
+
+  }
+
+}
+
+
+/* =========================================================
+   15. LOAD MESSAGES
+========================================================= */
+
+async function loadMessages() {
+
+  if (!MIWClient.activeConversation) return;
+
+  if (MIWClient.isLoadingMessages) return;
+
+  MIWClient.isLoadingMessages = true;
+
+  try {
+
+    const result = await api(
+      'getMessages',
+      {
+        conversationId:
+          MIWClient.activeConversation.conversationId,
+
+        limit: 50
+      }
+    );
+
+    const messages = Array.isArray(result)
+      ? result
+      : result.messages || [];
+
+    MIWClient.messages = messages;
+
+    renderMessages();
+
+    if (messages.length) {
+
+      MIWClient.lastMessageTimestamp =
+        messages[messages.length - 1].createdAt || '';
+
+    } else {
+
+      MIWClient.lastMessageTimestamp = '';
+
+      show('messageEmptyState');
+
+    }
+
+  } finally {
+
+    MIWClient.isLoadingMessages = false;
+
+  }
+
+}
+
+
+/* =========================================================
+   16. RENDER MESSAGES
+========================================================= */
+
+function renderMessages() {
+
+  const container = $('messageList');
+
+  container.replaceChildren();
+
+  const messages = MIWClient.messages;
+
+  if (!messages.length) {
+
+    show('messageEmptyState');
+
+    return;
+
+  }
+
+  hide('messageEmptyState');
+
+  let previousDate = '';
+
+  messages.forEach(function(message) {
+
+    const currentDate = formatDate(
+      message.createdAt
+    );
+
+    if (currentDate !== previousDate) {
+
+      const separator = document.createElement('div');
+
+      separator.className = 'message-day';
+
+      separator.textContent = currentDate;
+
+      container.appendChild(separator);
+
+      previousDate = currentDate;
+
+    }
+
+    const template = $('messageTemplate');
+
+    const fragment = template.content.cloneNode(true);
+
+    const row = fragment.querySelector('.message-row');
+
+    const mine =
+      message.senderId === MIWClient.user.userId;
+
+    row.classList.add(
+      mine ? 'mine' : 'theirs'
+    );
+
+    const bubble = fragment.querySelector('.message-bubble');
+
+    const body = fragment.querySelector('.message-body');
+
+    body.textContent = message.body || '';
+
+    if (message.isDeleted || message.deletedAt) {
+
+      bubble.classList.add('message-deleted');
+
+      body.textContent = 'Pesan ini telah dihapus.';
+
+    }
+
+    if (!mine && message.senderName) {
+
+      const sender = fragment.querySelector('.message-sender');
+
+      sender.textContent = message.senderName;
+
+      show(sender);
+
+    }
+
+    if (message.editedAt) {
+
+      show(
+        fragment.querySelector('.message-edited')
+      );
+
+    }
+
+    fragment.querySelector('.message-time')
+      .textContent = formatTime(message.createdAt);
+
+    const editButton = fragment.querySelector(
+      '.edit-message-action'
+    );
+
+    const deleteButton = fragment.querySelector(
+      '.delete-message-action'
+    );
+
+    if (mine && !message.deletedAt) {
+
+      show(editButton);
+
+      show(deleteButton);
+
+    }
+
+    if (message.replyToMessageId) {
+
+      const original = MIWClient.messages.find(
+        function(item) {
+
+          return item.messageId ===
+            message.replyToMessageId;
+
+        }
+      );
+
+      if (original) {
+
+        const reply = fragment.querySelector('.message-reply');
+
+        reply.querySelector('.reply-sender')
+          .textContent = original.senderName || 'User';
+
+        reply.querySelector('.reply-body')
+          .textContent = original.body || 'Pesan dihapus';
+
+        show(reply);
+
+      }
+
+    }
+
+    const replyButton = fragment.querySelector(
+      '.reply-message-action'
+    );
+
+    replyButton.addEventListener('click', function() {
+
+      setReply(message);
+
+    });
+
+    editButton.addEventListener('click', function() {
+
+      editMessagePrompt(message);
+
+    });
+
+    deleteButton.addEventListener('click', function() {
+
+      deleteMessagePrompt(message);
+
+    });
+
+    container.appendChild(fragment);
+
+  });
+
+}
+
+
+/* =========================================================
+   17. SEND MESSAGE
+========================================================= */
+
+async function sendCurrentMessage(event) {
+
+  event.preventDefault();
+
+  if (!MIWClient.activeConversation) {
+
+    toast(
+      'Pilih percakapan terlebih dahulu.',
+      'warning'
+    );
+
+    return;
+
+  }
+
+  const input = $('messageInput');
+
+  const body = input.value.trim();
+
+  if (!body) return;
+
+  const replyId = MIWClient.replyToMessage
+    ? MIWClient.replyToMessage.messageId
+    : '';
+
+  $('sendMessageButton').disabled = true;
+
+  try {
+
+    await api(
+      'sendMessage',
+      {
+        conversationId:
+          MIWClient.activeConversation.conversationId,
+
+        body: body,
+
+        replyToMessageId: replyId
+
+      }
+    );
+
+    input.value = '';
+
+    cancelReply();
+
+    await loadMessages();
+
+    await loadConversations();
+
+    $('messageContainer').scrollTop =
+      $('messageContainer').scrollHeight;
+
+  } catch (error) {
+
+    toast(
+      getErrorMessage(error),
+      'error'
+    );
+
+  } finally {
+
+    $('sendMessageButton').disabled = false;
+
+    input.focus();
+
+  }
+
+}
+
+
+/* =========================================================
+   18. REPLY MESSAGE
+========================================================= */
+
+function setReply(message) {
+
+  MIWClient.replyToMessage = message;
+
+  setText(
+    'replyPreviewName',
+    message.senderName || 'User'
+  );
+
+  setText(
+    'replyPreviewText',
+    message.body || 'Pesan telah dihapus.'
+  );
+
+  show('replyPreview');
+
+  $('messageInput').focus();
+
+}
+
+
+function cancelReply() {
+
+  MIWClient.replyToMessage = null;
+
+  hide('replyPreview');
+
+}
+
+
+/* =========================================================
+   19. EDIT MESSAGE
+========================================================= */
+
+function editMessagePrompt(message) {
+
+  const input = document.createElement('textarea');
+
+  input.value = message.body || '';
+
+  input.rows = 4;
+
+  input.style.width = '100%';
+
+  input.style.padding = '12px';
+
+  input.style.borderRadius = '10px';
+
+  input.style.background = 'var(--input-bg)';
+
+  input.style.color = 'var(--text-primary)';
+
+  input.style.border = '1px solid var(--border)';
+
+  openModal(
+    'Edit message',
+    input,
+    [
+      {
+        label: 'Cancel',
+
+        onClick: closeModal
+      },
+      {
+        label: 'Save',
+
+        primary: true,
+
+        onClick: async function() {
+
+          const newBody = input.value.trim();
+
+          if (!newBody) {
+
+            toast('Pesan tidak boleh kosong.', 'warning');
+
+            return;
+
+          }
+
+          try {
+
+            await api(
+              'editMessage',
+              {
+                messageId: message.messageId,
+                newBody: newBody
+              }
+            );
+
+            closeModal();
+
+            await loadMessages();
+
+            toast('Pesan berhasil diedit.');
+
+          } catch (error) {
+
+            toast(
+              getErrorMessage(error),
+              'error'
+            );
+
+          }
+
+        }
+
+      }
+    ]
+  );
+
+}
+
+
+/* =========================================================
+   20. DELETE MESSAGE
+========================================================= */
+
+function deleteMessagePrompt(message) {
+
+  openModal(
+    'Delete message',
+    'Apakah Anda yakin ingin menghapus pesan ini?',
+    [
+      {
+        label: 'Cancel',
+
+        onClick: closeModal
+      },
+      {
+        label: 'Delete',
+
+        primary: true,
+
+        onClick: async function() {
+
+          try {
+
+            await api(
+              'deleteMessage',
+              {
+                messageId: message.messageId
+              }
+            );
+
+            closeModal();
+
+            await loadMessages();
+
+            toast('Pesan berhasil dihapus.');
+
+          } catch (error) {
+
+            toast(
+              getErrorMessage(error),
+              'error'
+            );
+
+          }
+
+        }
+
+      }
+    ]
+  );
+
+}
+
+
+/* =========================================================
+   21. INCREMENTAL MESSAGE POLLING
+========================================================= */
+
+async function pollNewMessages() {
+
+  if (MIWClient.pollingBusy) return;
+
+  if (!MIWClient.activeConversation) return;
+
+  if (!MIWClient.lastMessageTimestamp) return;
+
+  MIWClient.pollingBusy = true;
+
+  try {
+
+    const result = await api(
+      'getNewMessages',
+      {
+        conversationId:
+          MIWClient.activeConversation.conversationId,
+
+        sinceTimestamp:
+          MIWClient.lastMessageTimestamp
+      }
+    );
+
+    const newMessages = Array.isArray(result)
+      ? result
+      : result.messages || [];
+
+    if (newMessages.length) {
+
+      const existingIds = new Set(
+        MIWClient.messages.map(function(item) {
+
+          return item.messageId;
+
+        })
+      );
+
+      newMessages.forEach(function(message) {
+
+        if (!existingIds.has(message.messageId)) {
+
+          MIWClient.messages.push(message);
+
+        }
+
+      });
+
+      MIWClient.messages.sort(function(a, b) {
+
+        return String(a.createdAt).localeCompare(
+          String(b.createdAt)
+        );
+
+      });
+
+      MIWClient.lastMessageTimestamp =
+        MIWClient.messages[
+          MIWClient.messages.length - 1
+        ].createdAt;
+
+      const messageContainer = $('messageContainer');
+
+      const nearBottom =
+        messageContainer.scrollHeight -
+        messageContainer.scrollTop -
+        messageContainer.clientHeight < 130;
+
+      renderMessages();
+
+      if (nearBottom) {
+
+        messageContainer.scrollTop =
+          messageContainer.scrollHeight;
+
+      }
+
+      await loadConversations();
+
+    }
+
+  } catch (error) {
+
+    console.warn('Polling:', error);
+
+  } finally {
+
+    MIWClient.pollingBusy = false;
+
+  }
+
+}
+
+
+function startPolling() {
+
+  stopPolling();
+
+  MIWClient.pollingTimer = setInterval(
+    function() {
+
+      pollNewMessages();
+
+    },
+    5000
+  );
+
+}
+
+
+function stopPolling() {
+
+  if (MIWClient.pollingTimer) {
+
+    clearInterval(MIWClient.pollingTimer);
+
+    MIWClient.pollingTimer = null;
+
+  }
+
+}
+
+
+/* =========================================================
+   22. LOAD OLDER MESSAGES
+========================================================= */
+
+async function loadOlderMessages() {
+
+  if (!MIWClient.activeConversation) return;
+
+  if (MIWClient.loadingOlder) return;
+
+  if (!MIWClient.messages.length) return;
+
+  MIWClient.loadingOlder = true;
+
+  const firstMessage = MIWClient.messages[0];
+
+  const container = $('messageContainer');
+
+  const oldHeight = container.scrollHeight;
+
+  const oldTop = container.scrollTop;
+
+  try {
+
+    const result = await api(
+      'getOlderMessages',
+      {
+        conversationId:
+          MIWClient.activeConversation.conversationId,
+
+        cursorCreatedAt: firstMessage.createdAt,
+
+        limit: 50
+      }
+    );
+
+    const olderMessages = Array.isArray(result)
+      ? result
+      : result.messages || [];
+
+    if (olderMessages.length) {
+
+      MIWClient.messages = olderMessages.concat(
+        MIWClient.messages
+      );
+
+      const seen = new Set();
+
+      MIWClient.messages = MIWClient.messages.filter(
+        function(message) {
+
+          if (seen.has(message.messageId)) {
+            return false;
+          }
+
+          seen.add(message.messageId);
+
+          return true;
+
+        }
+      );
+
+      renderMessages();
+
+      container.scrollTop =
+        container.scrollHeight - oldHeight + oldTop;
+
+    } else {
+
+      hide('loadOlderMessagesButton');
+
+    }
+
+  } catch (error) {
+
+    toast(
+      getErrorMessage(error),
+      'error'
+    );
+
+  } finally {
+
+    MIWClient.loadingOlder = false;
+
+  }
+
+}
+
+
+/* =========================================================
+   23. CONTACTS
+========================================================= */
+
+async function loadContacts() {
+
+  try {
+
+    const result = await api('getContacts');
+
+    MIWClient.contacts = Array.isArray(result)
+      ? result
+      : result.contacts || [];
+
+    renderContacts();
+
+  } catch (error) {
+
+    toast(
+      getErrorMessage(error),
+      'error'
+    );
+
+  }
+
+}
+
+
+function renderContacts() {
+
+  const container = $('contactList');
+
+  container.replaceChildren();
+
+  MIWClient.contacts.forEach(function(contact) {
+
+    const template = $('contactTemplate');
+
+    const fragment = template.content.cloneNode(true);
+
+    const item = fragment.querySelector('.contact-item');
+
+    item.dataset.userId = contact.userId || '';
+
+    fragment.querySelector('.contact-name')
+      .textContent =
+        contact.nickname ||
+        contact.displayName ||
+        'User';
+
+    fragment.querySelector('.contact-miw-id')
+      .textContent = contact.miwId || '';
+
+    fragment.querySelector('.contact-initial')
+      .textContent = getInitial(
+        contact.displayName
+      );
+
+    const button = fragment.querySelector(
+      '.contact-chat-button'
+    );
+
+    button.addEventListener('click', function() {
+
+      startChatWithContact(contact);
+
+    });
+
+    container.appendChild(fragment);
+
+  });
+
+}
+
+
+async function addContactPrompt() {
+
+  const input = document.createElement('input');
+
+  input.placeholder = 'MIW-XXXX-XXXX-XXXX';
+
+  input.className = 'full-search';
+
+  openModal(
+    'Add contact',
+    input,
+    [
+      {
+        label: 'Cancel',
+        onClick: closeModal
+      },
+      {
+        label: 'Add contact',
+        primary: true,
+        onClick: async function() {
+
+          try {
+
+            await api(
+              'addContact',
+              {
+                targetMiwId: input.value.trim()
+              }
+            );
+
+            closeModal();
+
+            await loadContacts();
+
+            toast('Kontak berhasil ditambahkan.');
+
+          } catch (error) {
+
+            toast(
+              getErrorMessage(error),
+              'error'
+            );
+
+          }
+
+        }
+      }
+    ]
+  );
+
+}
+
+
+async function startChatWithContact(contact) {
+
+  try {
+
+    const result = await api(
+      'startDirectChat',
+      {
+        targetMiwId: contact.miwId
+      }
+    );
+
+    await loadConversations();
+
+    const conversation =
+      result.conversation ||
+      result;
+
+    const conversationId =
+      conversation.conversationId;
+
+    const target = MIWClient.conversations.find(
+      function(item) {
+
+        return item.conversationId === conversationId;
+
+      }
+    );
+
+    if (target) {
+
+      navigate('chats');
+
+      await openConversation(target);
+
+    } else {
+
+      await loadConversations();
+
+    }
+
+  } catch (error) {
+
+    toast(
+      getErrorMessage(error),
+      'error'
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   24. NEW DIRECT CHAT
+========================================================= */
+
+function newChatPrompt() {
+
+  const input = document.createElement('input');
+
+  input.placeholder = 'Enter MIW ID';
+
+  input.className = 'full-search';
+
+  openModal(
+    'New conversation',
+    input,
+    [
+      {
+        label: 'Cancel',
+        onClick: closeModal
+      },
+      {
+        label: 'Start chat',
+        primary: true,
+        onClick: async function() {
+
+          try {
+
+            const result = await api(
+              'startDirectChat',
+              {
+                targetMiwId: input.value.trim()
+              }
+            );
+
+            closeModal();
+
+            await loadConversations();
+
+            const conversation = result.conversation || result;
+
+            const target = MIWClient.conversations.find(
+              function(item) {
+
+                return item.conversationId ===
+                  conversation.conversationId;
+
+              }
+            );
+
+            if (target) {
+
+              navigate('chats');
+
+              await openConversation(target);
+
+            }
+
+          } catch (error) {
+
+            toast(
+              getErrorMessage(error),
+              'error'
+            );
+
+          }
+
+        }
+
+      }
+    ]
+  );
+
+}
+
+
+/* =========================================================
+   25. GROUPS
+========================================================= */
+
+async function loadGroups() {
+
+  try {
+
+    const result = await api('getConversations');
+
+    const conversations = Array.isArray(result)
+      ? result
+      : result.conversations || [];
+
+    MIWClient.groups = conversations.filter(
+      function(item) {
+
+        return item.type === 'group';
+
+      }
+    );
+
+    renderGroups();
+
+  } catch (error) {
+
+    toast(
+      getErrorMessage(error),
+      'error'
+    );
+
+  }
+
+}
+
+
+function renderGroups() {
+
+  const container = $('groupList');
+
+  container.replaceChildren();
+
+  MIWClient.groups.forEach(function(group) {
+
+    const fragment = $('groupTemplate')
+      .content.cloneNode(true);
+
+    const card = fragment.querySelector('.group-card');
+
+    card.dataset.conversationId =
+      group.conversationId;
+
+    fragment.querySelector('.group-name')
+      .textContent = group.title || 'Group';
+
+    fragment.querySelector('.group-description')
+      .textContent = 'Group conversation';
+
+    fragment.querySelector('.group-initial')
+      .textContent = getInitial(group.title);
+
+    fragment.querySelector('.group-member-count')
+      .textContent =
+        (group.memberCount || 0) + ' members';
+
+    fragment.querySelector('.group-open-button')
+      .addEventListener('click', async function() {
+
+        navigate('chats');
+
+        await openConversation(group);
+
+      });
+
+    container.appendChild(fragment);
+
+  });
+
+}
+
+
+function createGroupPrompt() {
+
+  const wrapper = document.createElement('div');
+
+  const name = document.createElement('input');
+
+  name.className = 'full-search';
+
+  name.placeholder = 'Group name';
+
+  const members = document.createElement('textarea');
+
+  members.className = 'full-search';
+
+  members.style.marginTop = '12px';
+
+  members.rows = 3;
+
+  members.placeholder =
+    'MIW IDs separated by commas';
+
+  wrapper.append(name, members);
+
+  openModal(
+    'Create group',
+    wrapper,
+    [
+      {
+        label: 'Cancel',
+        onClick: closeModal
+      },
+      {
+        label: 'Create',
+        primary: true,
+        onClick: async function() {
+
+          try {
+
+            const memberIds = members.value
+              .split(',')
+              .map(function(item) {
+
+                return item.trim();
+
+              })
+              .filter(Boolean);
+
+            await api(
+              'createGroup',
+              {
+                groupName: name.value.trim(),
+                memberMiwIds: memberIds
+              }
+            );
+
+            closeModal();
+
+            await loadGroups();
+
+            await loadConversations();
+
+            toast('Grup berhasil dibuat.');
+
+          } catch (error) {
+
+            toast(
+              getErrorMessage(error),
+              'error'
+            );
+
+          }
+
+        }
+
+      }
+    ]
+  );
+
+}
+
+
+/* =========================================================
+   26. COMMUNITIES
+========================================================= */
+
+async function loadCommunities() {
+
+  try {
+
+    const result = await api('getMyCommunities');
+
+    MIWClient.communities = Array.isArray(result)
+      ? result
+      : result.communities || [];
+
+    renderCommunities();
+
+  } catch (error) {
+
+    toast(
+      getErrorMessage(error),
+      'error'
+    );
+
+  }
+
+}
+
+
+function renderCommunities() {
+
+  const container = $('communityList');
+
+  container.replaceChildren();
+
+  MIWClient.communities.forEach(function(community) {
+
+    const fragment = $('communityTemplate')
+      .content.cloneNode(true);
+
+    const card = fragment.querySelector('.community-card');
+
+    card.dataset.communityId = community.communityId;
+
+    fragment.querySelector('.community-name')
+      .textContent = community.name;
+
+    fragment.querySelector('.community-description')
+      .textContent = community.description || '';
+
+    fragment.querySelector('.community-initial')
+      .textContent = getInitial(community.name);
+
+    fragment.querySelector('.community-member-count')
+      .textContent =
+        (community.memberCount || 0) + ' members';
+
+    fragment.querySelector('.community-role')
+      .textContent = community.myRole || 'member';
+
+    fragment.querySelector('.community-open-button')
+      .addEventListener('click', function() {
+
+        openCommunityDetail(community);
+
+      });
+
+    container.appendChild(fragment);
+
+  });
+
+}
+
+
+function createCommunityPrompt() {
+
+  const wrapper = document.createElement('div');
+
+  const name = document.createElement('input');
+
+  name.className = 'full-search';
+
+  name.placeholder = 'Community name';
+
+  const description = document.createElement('textarea');
+
+  description.className = 'full-search';
+
+  description.style.marginTop = '12px';
+
+  description.rows = 4;
+
+  description.placeholder = 'Community description';
+
+  wrapper.append(name, description);
+
+  openModal(
+    'Create community',
+    wrapper,
+    [
+      {
+        label: 'Cancel',
+        onClick: closeModal
+      },
+      {
+        label: 'Create',
+        primary: true,
+        onClick: async function() {
+
+          try {
+
+            await api(
+              'createCommunity',
+              {
+                name: name.value.trim(),
+                description: description.value.trim()
+              }
+            );
+
+            closeModal();
+
+            await loadCommunities();
+
+            toast('Komunitas berhasil dibuat.');
+
+          } catch (error) {
+
+            toast(
+              getErrorMessage(error),
+              'error'
+            );
+
+          }
+
+        }
+
+      }
+    ]
+  );
+
+}
+
+
+async function openCommunityDetail(community) {
+
+  try {
+
+    const result = await api(
+      'getCommunityMembers',
+      {
+        communityId: community.communityId
+      }
+    );
+
+    const members = result.members || [];
+
+    const content = document.createElement('div');
+
+    const description = document.createElement('p');
+
+    description.textContent =
+      community.description || 'No description.';
+
+    content.appendChild(description);
+
+    const title = document.createElement('h4');
+
+    title.textContent = 'Members (' + members.length + ')';
+
+    content.appendChild(title);
+
+    members.forEach(function(member) {
+
+      const row = document.createElement('div');
+
+      row.className = 'entity-item';
+
+      const info = document.createElement('div');
+
+      info.className = 'entity-item-info';
+
+      const name = document.createElement('strong');
+
+      name.textContent = member.displayName;
+
+      const id = document.createElement('span');
+
+      id.textContent = member.miwId + ' · ' + member.role;
+
+      info.append(name, id);
+
+      row.appendChild(info);
+
+      content.appendChild(row);
+
+    });
+
+    openModal(
+      community.name,
+      content,
+      [
+        {
+          label: 'Close',
+          onClick: closeModal
+        }
+      ]
+    );
+
+  } catch (error) {
+
+    toast(
+      getErrorMessage(error),
+      'error'
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   27. MIW DRIVE
+========================================================= */
+
+async function loadDrive() {
+
+  try {
+
+    const result = await api(
+      'getMyFiles',
+      {
+        limit: 100
+      }
+    );
+
+    MIWClient.files = result.files || [];
+
+    renderDriveFiles();
+
+    const summary = await api(
+      'getMIWStorageSummary'
+    );
+
+    setText(
+      'storageFileCount',
+      (summary.totalFiles || 0) + ' files'
+    );
+
+    setText(
+      'storageUsed',
+      summary.totalFormatted || '0 Bytes used'
+    );
+
+  } catch (error) {
+
+    toast(
+      getErrorMessage(error),
+      'error'
+    );
+
+  }
+
+}
+
+
+function renderDriveFiles() {
+
+  const container = $('driveFileList');
+
+  container.replaceChildren();
+
+  MIWClient.files.forEach(function(file) {
+
+    const fragment = $('driveFileTemplate')
+      .content.cloneNode(true);
+
+    const card = fragment.querySelector('.drive-file-card');
+
+    card.dataset.fileId = file.fileId;
+
+    fragment.querySelector('.drive-file-name')
+      .textContent = file.fileName;
+
+    fragment.querySelector('.drive-file-size')
+      .textContent = formatFileSize(file.sizeBytes);
+
+    const icon = getFileIcon(file.mimeType);
+
+    fragment.querySelector('.drive-file-icon')
+      .textContent = icon;
+
+    fragment.querySelector('.drive-preview-button')
+      .addEventListener('click', function() {
+
+        previewFile(file);
+
+      });
+
+    fragment.querySelector('.drive-download-button')
+      .addEventListener('click', function() {
+
+        downloadFile(file);
+
+      });
+
+    fragment.querySelector('.drive-delete-button')
+      .addEventListener('click', function() {
+
+        deleteFilePrompt(file);
+
+      });
+
+    container.appendChild(fragment);
+
+  });
+
+}
+
+
+function getFileIcon(mimeType) {
+
+  if (mimeType.indexOf('image/') === 0) return '🖼️';
+
+  if (mimeType.indexOf('pdf') !== -1) return '📕';
+
+  if (mimeType.indexOf('spreadsheet') !== -1) return '📊';
+
+  if (mimeType.indexOf('word') !== -1) return '📝';
+
+  if (mimeType.indexOf('presentation') !== -1) return '📽️';
+
+  if (mimeType.indexOf('zip') !== -1) return '🗜️';
+
+  return '📄';
+
+}
+
+
+async function uploadFile(file, conversationId) {
+
+  if (!file) return;
+
+  if (file.size > 5 * 1024 * 1024) {
+
+    toast(
+      'Ukuran file maksimal 5 MB.',
+      'error'
+    );
+
+    return;
+
+  }
+
+  try {
+
+    const base64 = await fileToBase64(file);
+
+    if (conversationId) {
+
+      await api(
+        'uploadChatFile',
+        {
+          conversationId: conversationId,
+          fileName: file.name,
+          mimeType: file.type,
+          base64Data: base64
+        }
+      );
+
+      await loadMessages();
+
+      toast('Attachment berhasil dikirim.');
+
+    } else {
+
+      await api(
+        'uploadPrivateFile',
+        {
+          fileName: file.name,
+          mimeType: file.type,
+          base64Data: base64
+        }
+      );
+
+      await loadDrive();
+
+      toast('File berhasil diunggah.');
+
+    }
+
+  } catch (error) {
+
+    toast(
+      getErrorMessage(error),
+      'error'
+    );
+
+  }
+
+}
+
+
+async function downloadFile(file) {
+
+  try {
+
+    const result = await api(
+      'downloadMIWFile',
+      {
+        fileId: file.fileId
+      }
+    );
+
+    const bytes = Uint8Array.from(
+      atob(result.base64Data),
+      function(character) {
+
+        return character.charCodeAt(0);
+
+      }
+    );
+
+    const blob = new Blob(
+      [bytes],
+      {
+        type: result.mimeType
+      }
+    );
+
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+
+    link.href = url;
+
+    link.download = result.fileName;
+
+    link.click();
+
+    setTimeout(function() {
+
+      URL.revokeObjectURL(url);
+
+    }, 1000);
+
+  } catch (error) {
+
+    toast(
+      getErrorMessage(error),
+      'error'
+    );
+
+  }
+
+}
+
+
+async function previewFile(file) {
+
+  try {
+
+    const result = await api(
+      'previewMIWFile',
+      {
+        fileId: file.fileId
+      }
+    );
+
+    if (!result.previewable) {
+
+      toast(
+        'Preview tidak tersedia untuk tipe file ini.',
+        'warning'
+      );
+
+      return;
+
+    }
+
+    if (
+      result.mimeType.indexOf('image/') === 0
+    ) {
+
+      const image = document.createElement('img');
+
+      image.src = result.dataUrl;
+
+      image.alt = result.fileName;
+
+      image.style.maxWidth = '100%';
+
+      image.style.maxHeight = '65vh';
+
+      openModal(
+        result.fileName,
+        image,
+        [
+          {
+            label: 'Close',
+            onClick: closeModal
+          }
+        ]
+      );
+
+    } else if (
+      result.mimeType === 'application/pdf'
+    ) {
+
+      const link = document.createElement('a');
+
+      link.href = result.dataUrl;
+
+      link.target = '_blank';
+
+      link.rel = 'noopener noreferrer';
+
+      link.textContent = 'Open PDF preview';
+
+      openModal(
+        result.fileName,
+        link,
+        [
+          {
+            label: 'Close',
+            onClick: closeModal
+          }
+        ]
+      );
+
+    } else {
+
+      const pre = document.createElement('pre');
+
+      pre.textContent = atob(result.base64Data);
+
+      pre.style.whiteSpace = 'pre-wrap';
+
+      openModal(
+        result.fileName,
+        pre,
+        [
+          {
+            label: 'Close',
+            onClick: closeModal
+          }
+        ]
+      );
+
+    }
+
+  } catch (error) {
+
+    toast(
+      getErrorMessage(error),
+      'error'
+    );
+
+  }
+
+}
+
+
+function deleteFilePrompt(file) {
+
+  openModal(
+    'Delete file',
+    'Hapus ' + file.fileName + ' dari MIW Drive?',
+    [
+      {
+        label: 'Cancel',
+        onClick: closeModal
+      },
+      {
+        label: 'Delete',
+        primary: true,
+        onClick: async function() {
+
+          try {
+
+            await api(
+              'deleteMIWFile',
+              {
+                fileId: file.fileId
+              }
+            );
+
+            closeModal();
+
+            await loadDrive();
+
+            toast('File berhasil dihapus.');
+
+          } catch (error) {
+
+            toast(
+              getErrorMessage(error),
+              'error'
+            );
+
+          }
+
+        }
+
+      }
+    ]
+  );
+
+}
+
+
+/* =========================================================
+   28. THEME
+========================================================= */
+
+function setTheme(theme) {
+
+  if (
+    ['light','dark','system'].indexOf(theme) === -1
+  ) {
+
+    theme = 'system';
+
+  }
+
+  MIWClient.theme = theme;
+
+  document.documentElement.setAttribute(
+    'data-theme',
+    theme
+  );
+
+  localStorage.setItem(
+    'MIW_THEME',
+    theme
+  );
+
+  document.querySelectorAll('[data-theme-choice]')
+    .forEach(function(button) {
+
+      button.classList.toggle(
+        'active',
+        button.dataset.themeChoice === theme
+      );
+
+    });
+
+}
+
+
+function loadTheme() {
+
+  const theme =
+    localStorage.getItem('MIW_THEME') ||
+    'system';
+
+  setTheme(theme);
+
+}
+
+
+/* =========================================================
+   29. SEARCH
+========================================================= */
+
+function setupSearch() {
+
+  $('chatSearch').addEventListener(
+    'input',
+    renderConversations
+  );
+
+  $('globalSearch').addEventListener(
+    'keydown',
+    function(event) {
+
+      if (event.key === 'Enter') {
+
+        const query = event.target.value.trim();
+
+        navigate('contacts');
+
+        $('contactSearch').value = query;
+
+        filterContacts(query);
+
+      }
+
+    }
+  );
+
+  $('contactSearch').addEventListener(
+    'input',
+    function(event) {
+
+      filterContacts(event.target.value);
+
+    }
+  );
+
+}
+
+
+function filterContacts(keyword) {
+
+  keyword = keyword.toLowerCase();
+
+  document.querySelectorAll('.contact-item')
+    .forEach(function(item) {
+
+      const text = item.textContent.toLowerCase();
+
+      item.style.display =
+        text.includes(keyword)
+          ? ''
+          : 'none';
+
+    });
+
+}
+
+
+/* =========================================================
+   30. EMOJI PICKER
+========================================================= */
+
+function insertEmoji(emoji) {
+
+  const input = $('messageInput');
+
+  const start = input.selectionStart;
+
+  const end = input.selectionEnd;
+
+  const value = input.value;
+
+  input.value =
+    value.substring(0, start) +
+    emoji +
+    value.substring(end);
+
+  input.focus();
+
+  const cursor = start + emoji.length;
+
+  input.setSelectionRange(
+    cursor,
+    cursor
+  );
+
+}
+
+
+/* =========================================================
+   31. CONNECTION STATUS
+========================================================= */
+
+async function checkConnection() {
+
+  try {
+
+    await api('ping');
+
+    $('connectionStatus')
+      .classList.remove('disconnected');
+
+    setText(
+      'connectionText',
+      'Connected'
+    );
+
+  } catch (error) {
+
+    $('connectionStatus')
+      .classList.add('disconnected');
+
+    setText(
+      'connectionText',
+      'Disconnected'
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   32. EVENT LISTENERS
+========================================================= */
+
+function initializeEventListeners() {
+
+
+  // AUTH
+
+  $('loginFormElement').addEventListener(
+    'submit',
+    function(event) {
+
+      event.preventDefault();
+
+      login(
+        $('loginEmail').value.trim(),
+        $('loginPassword').value
+      );
+
+    }
+  );
+
+
+  $('registerFormElement').addEventListener(
+    'submit',
+    function(event) {
+
+      event.preventDefault();
+
+      register(
+        $('registerName').value.trim(),
+        $('registerEmail').value.trim(),
+        $('registerPassword').value
+      );
+
+    }
+  );
+
+
+  $('showRegisterButton').addEventListener(
+    'click',
+    showRegisterForm
+  );
+
+
+  $('showLoginButton').addEventListener(
+    'click',
+    showLoginForm
+  );
+
+
+  // PASSWORD VISIBILITY
+
+  document.querySelectorAll('[data-password-target]')
+    .forEach(function(button) {
+
+      button.addEventListener('click', function() {
+
+        const input = $(
+          button.dataset.passwordTarget
+        );
+
+        input.type =
+          input.type === 'password'
+            ? 'text'
+            : 'password';
+
+        button.textContent =
+          input.type === 'password'
+            ? 'Show'
+            : 'Hide';
+
+      });
+
+    });
+
+
+  // NAVIGATION
+
+  document.querySelectorAll('[data-view]')
+    .forEach(function(button) {
+
+      button.addEventListener('click', function() {
+
+        navigate(button.dataset.view);
+
+      });
+
+    });
+
+
+  // CHAT
+
+  $('messageForm').addEventListener(
+    'submit',
+    sendCurrentMessage
+  );
+
+
+  $('messageInput').addEventListener(
+    'keydown',
+    function(event) {
+
+      if (
+        event.key === 'Enter' &&
+        !event.shiftKey
+      ) {
+
+        event.preventDefault();
+
+        $('messageForm').requestSubmit();
+
+      }
+
+    }
+  );
+
+
+  $('backToChatsButton').addEventListener(
+    'click',
+    function() {
+
+      $('chatsView').classList.remove('chat-open');
+
+    }
+  );
+
+
+  $('loadOlderMessagesButton').addEventListener(
+    'click',
+    loadOlderMessages
+  );
+
+
+  $('cancelReplyButton').addEventListener(
+    'click',
+    cancelReply
+  );
+
+
+  // EMOJI
+
+  $('emojiButton').addEventListener(
+    'click',
+    function() {
+
+      $('emojiPicker').classList.toggle('hidden');
+
+    }
+  );
+
+
+  document.querySelectorAll('.emoji-grid button')
+    .forEach(function(button) {
+
+      button.addEventListener('click', function() {
+
+        insertEmoji(button.textContent);
+
+      });
+
+    });
+
+
+  // ATTACHMENT
+
+  $('attachmentButton').addEventListener(
+    'click',
+    function() {
+
+      $('attachmentInput').click();
+
+    }
+  );
+
+
+  $('attachmentInput').addEventListener(
+    'change',
+    function(event) {
+
+      const file = event.target.files[0];
+
+      if (file && MIWClient.activeConversation) {
+
+        uploadFile(
+          file,
+          MIWClient.activeConversation.conversationId
+        );
+
+      }
+
+      event.target.value = '';
+
+    }
+  );
+
+
+  // DRIVE
+
+  $('uploadDriveButton').addEventListener(
+    'click',
+    function() {
+
+      $('driveFileInput').click();
+
+    }
+  );
+
+
+  $('driveFileInput').addEventListener(
+    'change',
+    function(event) {
+
+      const file = event.target.files[0];
+
+      if (file) {
+        uploadFile(file, '');
+      }
+
+      event.target.value = '';
+
+    }
+  );
+
+
+  // CONTACTS
+
+  $('addContactButton').addEventListener(
+    'click',
+    addContactPrompt
+  );
+
+
+  $('newChatButton').addEventListener(
+    'click',
+    newChatPrompt
+  );
+
+
+  $('emptyNewChatButton').addEventListener(
+    'click',
+    newChatPrompt
+  );
+
+
+  // GROUPS
+
+  $('createGroupButton').addEventListener(
+    'click',
+    createGroupPrompt
+  );
+
+
+  // COMMUNITIES
+
+  $('createCommunityButton').addEventListener(
+    'click',
+    createCommunityPrompt
+  );
+
+
+  // PROFILE
+
+  $('profileForm').addEventListener(
+    'submit',
+    saveProfile
+  );
+
+
+  $('currentUserButton').addEventListener(
+    'click',
+    function() {
+
+      navigate('profile');
+
+    }
+  );
+
+
+  $('topbarProfileButton').addEventListener(
+    'click',
+    function() {
+
+      navigate('profile');
+
+    }
+  );
+
+
+  // LOGOUT
+
+  $('logoutButton').addEventListener(
+    'click',
+    logout
+  );
+
+
+  // THEME
+
+  $('themeButton').addEventListener(
+    'click',
+    function() {
+
+      const next = {
+
+        system: 'dark',
+
+        dark: 'light',
+
+        light: 'system'
+
+      };
+
+      setTheme(
+        next[MIWClient.theme] || 'system'
+      );
+
+    }
+  );
+
+
+  document.querySelectorAll('[data-theme-choice]')
+    .forEach(function(button) {
+
+      button.addEventListener('click', function() {
+
+        setTheme(button.dataset.themeChoice);
+
+      });
+
+    });
+
+
+  // MODAL
+
+  $('closeModalButton').addEventListener(
+    'click',
+    closeModal
+  );
+
+
+  $('modalBackdrop').addEventListener(
+    'click',
+    function(event) {
+
+      if (event.target === $('modalBackdrop')) {
+
+        closeModal();
+
+      }
+
+    }
+  );
+
+
+  // MOBILE
+
+  $('mobileMenuButton').addEventListener(
+    'click',
+    openMobileSidebar
+  );
+
+
+  $('mobileCloseSidebar').addEventListener(
+    'click',
+    closeMobileSidebar
+  );
+
+
+  $('sidebarBackdrop').addEventListener(
+    'click',
+    closeMobileSidebar
+  );
+
+
+  // CHAT FILTER
+
+  document.querySelectorAll('[data-chat-filter]')
+    .forEach(function(button) {
+
+      button.addEventListener('click', function() {
+
+        document.querySelectorAll('[data-chat-filter]')
+          .forEach(function(item) {
+
+            item.classList.remove('active');
+
+          });
+
+        button.classList.add('active');
+
+        MIWClient.chatFilter =
+          button.dataset.chatFilter;
+
+        renderConversations();
+
+      });
+
+    });
+
+
+  // SEARCH
+
+  setupSearch();
+
+}
+
+
+/* =========================================================
+   33. SESSION BOOTSTRAP
+========================================================= */
+
+async function bootstrapMIW() {
+
+  try {
+
+    loadTheme();
+
+    initializeEventListeners();
+
+    hide('loadingScreen');
+
+    if (!MIWClient.token) {
+
+      show('authScreen');
+
+      hide('appScreen');
+
+      return;
+
+    }
+
+    show('loadingScreen');
+
+    const status = await api(
+      'getAuthStatus',
+      {}
+    );
+
+    const authenticated =
+      status.authenticated === true ||
+      status.isAuthenticated === true;
+
+    if (authenticated) {
+
+      await initializeAuthenticatedApp();
+
+      await loadMyProfile();
+
+    } else {
+
+      MIWClient.token = '';
+
+      sessionStorage.removeItem('MIW_SESSION');
+
+      show('authScreen');
+
+      hide('appScreen');
+
+    }
+
+  } catch (error) {
+
+    console.error('MIW bootstrap:', error);
+
+    MIWClient.token = '';
+
+    sessionStorage.removeItem('MIW_SESSION');
+
+    hide('loadingScreen');
+
+    show('authScreen');
+
+    hide('appScreen');
+
+  }
+
+}
+
+
+/* =========================================================
+   34. DOCUMENT READY
+========================================================= */
+
+document.addEventListener(
+  'DOMContentLoaded',
+  function() {
+
+    bootstrapMIW();
+
+  }
+);
+
+
+/* =========================================================
+   35. CLEANUP
+========================================================= */
+
+window.addEventListener(
+  'beforeunload',
+  function() {
+
+    stopPolling();
+
+  }
+);
+
+</script>
