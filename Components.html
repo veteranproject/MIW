@@ -1,0 +1,984 @@
+
+<!-- =========================================================
+     MIW MESSENGER V2
+     REUSABLE UI COMPONENTS
+========================================================== -->
+
+
+<!-- =========================================================
+     1. CONVERSATION ITEM
+========================================================== -->
+
+<template id="conversationTemplate">
+
+  <button
+    type="button"
+    class="conversation-item"
+    data-conversation-id=""
+  >
+
+    <div class="avatar avatar-medium">
+
+      <img
+        class="conversation-avatar hidden"
+        alt=""
+      >
+
+      <span class="conversation-initial">C</span>
+
+    </div>
+
+
+    <div class="conversation-info">
+
+      <div class="conversation-info-top">
+
+        <strong class="conversation-name">
+          Conversation
+        </strong>
+
+        <time class="conversation-time"></time>
+
+      </div>
+
+
+      <div class="conversation-info-bottom">
+
+        <span class="conversation-preview">
+          No messages yet
+        </span>
+
+        <span class="unread-count hidden"></span>
+
+      </div>
+
+    </div>
+
+  </button>
+
+</template>
+
+
+<!-- =========================================================
+     2. MESSAGE ITEM
+========================================================== -->
+
+<template id="messageTemplate">
+
+  <div class="message-row">
+
+    <div class="message-bubble">
+
+      <div class="message-sender hidden"></div>
+
+
+      <div class="message-reply hidden">
+
+        <strong class="reply-sender"></strong>
+
+        <p class="reply-body"></p>
+
+      </div>
+
+
+      <p class="message-body"></p>
+
+
+      <div class="message-meta">
+
+        <span class="message-edited hidden">
+          edited
+        </span>
+
+        <time class="message-time"></time>
+
+      </div>
+
+
+      <div class="message-actions">
+
+        <button
+          type="button"
+          class="message-action-button reply-message-action"
+          data-action="reply"
+        >
+          Reply
+        </button>
+
+
+        <button
+          type="button"
+          class="message-action-button edit-message-action hidden"
+          data-action="edit"
+        >
+          Edit
+        </button>
+
+
+        <button
+          type="button"
+          class="message-action-button delete-message-action hidden"
+          data-action="delete"
+        >
+          Delete
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</template>
+
+
+<!-- =========================================================
+     3. CONTACT ITEM
+========================================================== -->
+
+<template id="contactTemplate">
+
+  <div
+    class="entity-item contact-item"
+    data-user-id=""
+  >
+
+    <div class="avatar avatar-medium">
+
+      <img
+        class="contact-avatar hidden"
+        alt=""
+      >
+
+      <span class="contact-initial">U</span>
+
+    </div>
+
+
+    <div class="entity-item-info">
+
+      <strong class="contact-name">
+        User
+      </strong>
+
+      <span class="contact-miw-id">
+        MIW-XXXX-XXXX-XXXX
+      </span>
+
+    </div>
+
+
+    <button
+      type="button"
+      class="secondary-button contact-chat-button"
+      data-action="chat"
+    >
+      Message
+    </button>
+
+
+    <button
+      type="button"
+      class="icon-button contact-more-button"
+      data-action="more"
+      aria-label="Contact options"
+    >
+      ⋯
+    </button>
+
+  </div>
+
+</template>
+
+
+<!-- =========================================================
+     4. GROUP CARD
+========================================================== -->
+
+<template id="groupTemplate">
+
+  <article
+    class="entity-card group-card"
+    data-conversation-id=""
+  >
+
+    <div class="avatar avatar-large">
+
+      <span class="group-initial">
+        G
+      </span>
+
+    </div>
+
+
+    <h3 class="group-name">
+      Group name
+    </h3>
+
+
+    <p class="group-description">
+      Group conversation
+    </p>
+
+
+    <div class="entity-card-footer">
+
+      <span class="group-member-count">
+        0 members
+      </span>
+
+
+      <button
+        type="button"
+        class="secondary-button group-open-button"
+        data-action="open"
+      >
+        Open chat
+      </button>
+
+    </div>
+
+  </article>
+
+</template>
+
+
+<!-- =========================================================
+     5. COMMUNITY CARD
+========================================================== -->
+
+<template id="communityTemplate">
+
+  <article
+    class="entity-card community-card"
+    data-community-id=""
+  >
+
+    <div class="avatar avatar-large">
+
+      <img
+        class="community-avatar hidden"
+        alt=""
+      >
+
+      <span class="community-initial">
+        C
+      </span>
+
+    </div>
+
+
+    <h3 class="community-name">
+      Community name
+    </h3>
+
+
+    <p class="community-description">
+      Community description
+    </p>
+
+
+    <div class="entity-card-footer">
+
+      <span class="community-member-count">
+        0 members
+      </span>
+
+
+      <span class="community-role">
+        Member
+      </span>
+
+    </div>
+
+
+    <button
+      type="button"
+      class="secondary-button community-open-button"
+      data-action="open"
+    >
+      View community
+    </button>
+
+  </article>
+
+</template>
+
+
+<!-- =========================================================
+     6. DRIVE FILE CARD
+========================================================== -->
+
+<template id="driveFileTemplate">
+
+  <article
+    class="drive-file-card"
+    data-file-id=""
+  >
+
+    <div class="drive-file-icon">
+      📄
+    </div>
+
+
+    <strong class="drive-file-name">
+      document.pdf
+    </strong>
+
+
+    <span class="drive-file-size">
+      0 KB
+    </span>
+
+
+    <div class="drive-file-actions">
+
+      <button
+        type="button"
+        class="message-action-button drive-preview-button"
+        data-action="preview"
+      >
+        Preview
+      </button>
+
+
+      <button
+        type="button"
+        class="message-action-button drive-download-button"
+        data-action="download"
+      >
+        Download
+      </button>
+
+
+      <button
+        type="button"
+        class="message-action-button drive-delete-button"
+        data-action="delete"
+      >
+        Delete
+      </button>
+
+    </div>
+
+  </article>
+
+</template>
+
+
+<!-- =========================================================
+     7. MESSAGE ATTACHMENT
+========================================================== -->
+
+<template id="attachmentTemplate">
+
+  <div
+    class="message-attachment"
+    data-file-id=""
+  >
+
+    <div class="attachment-icon">
+      📎
+    </div>
+
+
+    <div class="attachment-info">
+
+      <strong class="attachment-name">
+        attachment.pdf
+      </strong>
+
+      <span class="attachment-size">
+        0 KB
+      </span>
+
+    </div>
+
+
+    <button
+      type="button"
+      class="icon-button attachment-download-button"
+      data-action="download"
+      aria-label="Download attachment"
+    >
+      ↓
+    </button>
+
+  </div>
+
+</template>
+
+
+<!-- =========================================================
+     8. EMPTY STATE
+========================================================== -->
+
+<template id="emptyStateTemplate">
+
+  <div class="component-empty-state">
+
+    <div class="component-empty-icon">
+      ◇
+    </div>
+
+
+    <h3 class="component-empty-title">
+      Nothing here yet
+    </h3>
+
+
+    <p class="component-empty-description">
+      Start by adding something new.
+    </p>
+
+
+    <button
+      type="button"
+      class="primary-button component-empty-action hidden"
+    >
+      Get started
+    </button>
+
+  </div>
+
+</template>
+
+
+<!-- =========================================================
+     9. LOADING STATE
+========================================================== -->
+
+<template id="loadingTemplate">
+
+  <div class="component-loading">
+
+    <div class="loading-spinner"></div>
+
+    <span class="component-loading-text">
+      Loading...
+    </span>
+
+  </div>
+
+</template>
+
+
+<!-- =========================================================
+     10. MEMBER ITEM
+========================================================== -->
+
+<template id="memberTemplate">
+
+  <div
+    class="entity-item member-item"
+    data-user-id=""
+  >
+
+    <div class="avatar avatar-medium">
+
+      <img
+        class="member-avatar hidden"
+        alt=""
+      >
+
+      <span class="member-initial">U</span>
+
+    </div>
+
+
+    <div class="entity-item-info">
+
+      <strong class="member-name">
+        User
+      </strong>
+
+      <span class="member-miw-id">
+        MIW-XXXX-XXXX-XXXX
+      </span>
+
+    </div>
+
+
+    <span class="member-role">
+      Member
+    </span>
+
+
+    <button
+      type="button"
+      class="icon-button member-more-button"
+      data-action="more"
+      aria-label="Member options"
+    >
+      ⋯
+    </button>
+
+  </div>
+
+</template>
+
+
+<!-- =========================================================
+     11. SEARCH RESULT ITEM
+========================================================== -->
+
+<template id="searchResultTemplate">
+
+  <button
+    type="button"
+    class="entity-item search-result-item"
+    data-user-id=""
+  >
+
+    <div class="avatar avatar-medium">
+
+      <img
+        class="search-result-avatar hidden"
+        alt=""
+      >
+
+      <span class="search-result-initial">U</span>
+
+    </div>
+
+
+    <div class="entity-item-info">
+
+      <strong class="search-result-name">
+        User
+      </strong>
+
+      <span class="search-result-miw-id">
+        MIW-XXXX-XXXX-XXXX
+      </span>
+
+    </div>
+
+  </button>
+
+</template>
+
+
+<!-- =========================================================
+     12. PROFILE DETAIL
+========================================================== -->
+
+<template id="profileDetailTemplate">
+
+  <div class="profile-detail">
+
+    <div class="profile-avatar-large">
+
+      <img
+        class="profile-detail-photo hidden"
+        alt=""
+      >
+
+      <span class="profile-detail-initial">
+        U
+      </span>
+
+    </div>
+
+
+    <h3 class="profile-detail-name">
+      User
+    </h3>
+
+
+    <span class="miw-id-label profile-detail-miw-id">
+      MIW-XXXX-XXXX-XXXX
+    </span>
+
+
+    <p class="profile-detail-bio">
+      No bio available.
+    </p>
+
+  </div>
+
+</template>
+
+
+<!-- =========================================================
+     13. DATE SEPARATOR
+========================================================== -->
+
+<template id="dateSeparatorTemplate">
+
+  <div class="message-day">
+    Today
+  </div>
+
+</template>
+
+
+<!-- =========================================================
+     14. NOTIFICATION ITEM
+========================================================== -->
+
+<template id="notificationTemplate">
+
+  <div class="notification-item">
+
+    <div class="notification-icon">
+      ✦
+    </div>
+
+
+    <div class="notification-info">
+
+      <strong class="notification-title">
+        Notification
+      </strong>
+
+      <p class="notification-description">
+        Notification description.
+      </p>
+
+      <time class="notification-time"></time>
+
+    </div>
+
+  </div>
+
+</template>
+
+
+<!-- =========================================================
+     15. CONFIRMATION CONTENT
+========================================================== -->
+
+<template id="confirmationTemplate">
+
+  <div class="confirmation-content">
+
+    <div class="confirmation-icon">
+      !
+    </div>
+
+
+    <p class="confirmation-message">
+      Are you sure?
+    </p>
+
+  </div>
+
+</template>
+
+
+<!-- =========================================================
+     16. TEMPLATE COMPONENT STYLES
+========================================================== -->
+
+<style>
+
+.component-empty-state {
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 220px;
+
+  padding: 25px;
+
+  text-align: center;
+
+}
+
+.component-empty-icon {
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 55px;
+  height: 55px;
+
+  border-radius: 18px;
+
+  background: var(--accent-soft);
+
+  color: var(--accent);
+
+  font-size: 25px;
+
+}
+
+.component-empty-title {
+
+  margin: 15px 0 5px;
+
+  font-size: 14px;
+
+}
+
+.component-empty-description {
+
+  max-width: 260px;
+
+  margin: 0 0 15px;
+
+  color: var(--text-muted);
+
+  font-size: 11px;
+
+}
+
+.component-loading {
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 30px;
+
+  color: var(--text-muted);
+
+  font-size: 11px;
+
+}
+
+.entity-card-footer {
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+
+  margin-top: 15px;
+
+  color: var(--text-muted);
+
+  font-size: 10px;
+
+}
+
+.community-card > button {
+
+  width: 100%;
+
+  margin-top: 14px;
+
+}
+
+.drive-file-actions {
+
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 4px;
+
+  margin-top: 12px;
+
+}
+
+.message-attachment {
+
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  min-width: 190px;
+  max-width: 280px;
+
+  padding: 10px;
+
+  margin-top: 8px;
+
+  border: 1px solid var(--border-soft);
+
+  border-radius: 10px;
+
+  background: rgba(0,0,0,.08);
+
+}
+
+.attachment-icon {
+
+  font-size: 23px;
+
+}
+
+.attachment-info {
+
+  flex: 1;
+
+  min-width: 0;
+
+}
+
+.attachment-info strong {
+
+  display: block;
+
+  overflow: hidden;
+
+  font-size: 10px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+}
+
+.attachment-info span {
+
+  display: block;
+
+  margin-top: 3px;
+
+  font-size: 9px;
+
+  opacity: .7;
+
+}
+
+.notification-item {
+
+  display: flex;
+
+  gap: 12px;
+
+  padding: 12px;
+
+  border-bottom: 1px solid var(--border);
+
+}
+
+.notification-icon {
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 35px;
+  height: 35px;
+
+  flex-shrink: 0;
+
+  border-radius: 11px;
+
+  background: var(--accent-soft);
+
+  color: var(--accent);
+
+}
+
+.notification-info {
+
+  flex: 1;
+
+  min-width: 0;
+
+}
+
+.notification-title {
+
+  font-size: 11px;
+
+}
+
+.notification-description {
+
+  margin: 4px 0;
+
+  color: var(--text-secondary);
+
+  font-size: 10px;
+
+}
+
+.notification-time {
+
+  color: var(--text-muted);
+
+  font-size: 9px;
+
+}
+
+.confirmation-content {
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  gap: 12px;
+
+  text-align: center;
+
+}
+
+.confirmation-icon {
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 45px;
+  height: 45px;
+
+  border-radius: 50%;
+
+  background: rgba(229,107,120,.12);
+
+  color: var(--danger);
+
+  font-size: 22px;
+
+  font-weight: 700;
+
+}
+
+.confirmation-message {
+
+  color: var(--text-secondary);
+
+  font-size: 12px;
+
+}
+
+.profile-detail {
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  text-align: center;
+
+}
+
+.profile-detail-name {
+
+  margin: 15px 0 7px;
+
+  font-size: 16px;
+
+}
+
+.profile-detail-bio {
+
+  max-width: 300px;
+
+  color: var(--text-secondary);
+
+  font-size: 11px;
+
+}
+
+@media (max-width: 760px) {
+
+  .message-attachment {
+
+    max-width: 220px;
+
+  }
+
+}
+
+</style>
