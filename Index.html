@@ -1,0 +1,1631 @@
+
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <base target="_top">
+
+  <meta charset="UTF-8">
+
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta name="theme-color" content="#111827">
+
+  <meta name="description"
+        content="MIW Messenger - Private communication platform">
+
+  <title>MIW Messenger</title>
+
+  <?!= include('Styles'); ?>
+
+</head>
+
+<body>
+
+  <!-- =====================================================
+       APP LOADING SCREEN
+  ====================================================== -->
+
+  <div id="loadingScreen" class="loading-screen">
+
+    <div class="loading-content">
+
+      <div class="miw-logo loading-logo">M</div>
+
+      <h1>MIW</h1>
+
+      <p>Connecting your conversations...</p>
+
+      <div class="loading-spinner"></div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =====================================================
+       AUTHENTICATION
+  ====================================================== -->
+
+  <main id="authScreen" class="auth-screen hidden">
+
+    <section class="auth-brand">
+
+      <div class="brand-content">
+
+        <div class="miw-logo brand-logo">M</div>
+
+        <h1>MIW Messenger</h1>
+
+        <p class="brand-description">
+          Your conversations. Your identity. Your space.
+        </p>
+
+        <div class="brand-features">
+
+          <div class="brand-feature">
+            <span>✦</span>
+            <p>Private conversations</p>
+          </div>
+
+          <div class="brand-feature">
+            <span>✦</span>
+            <p>Unique MIW identity</p>
+          </div>
+
+          <div class="brand-feature">
+            <span>✦</span>
+            <p>Integrated cloud storage</p>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="brand-footer">
+        MIW Messenger v2.0
+      </div>
+
+    </section>
+
+
+    <!-- AUTH FORM PANEL -->
+
+    <section class="auth-panel">
+
+      <div class="auth-container">
+
+        <div class="auth-mobile-logo">
+
+          <div class="miw-logo">M</div>
+
+          <span>MIW Messenger</span>
+
+        </div>
+
+
+        <!-- LOGIN FORM -->
+
+        <div id="loginForm" class="auth-form">
+
+          <div class="auth-heading">
+
+            <span class="eyebrow">WELCOME BACK</span>
+
+            <h2>Sign in to MIW</h2>
+
+            <p>
+              Enter your account details to continue.
+            </p>
+
+          </div>
+
+
+          <form id="loginFormElement">
+
+            <div class="form-group">
+
+              <label for="loginEmail">
+                Email address
+              </label>
+
+              <input
+                type="email"
+                id="loginEmail"
+                name="email"
+                placeholder="name@example.com"
+                autocomplete="email"
+                required
+              >
+
+            </div>
+
+
+            <div class="form-group">
+
+              <label for="loginPassword">
+                Password
+              </label>
+
+              <div class="password-wrapper">
+
+                <input
+                  type="password"
+                  id="loginPassword"
+                  name="password"
+                  placeholder="Enter your password"
+                  autocomplete="current-password"
+                  required
+                >
+
+                <button
+                  type="button"
+                  class="password-toggle"
+                  data-password-target="loginPassword"
+                  aria-label="Show password"
+                >
+                  Show
+                </button>
+
+              </div>
+
+            </div>
+
+
+            <div
+              id="loginError"
+              class="form-message error-message hidden"
+              role="alert"
+            ></div>
+
+
+            <button
+              type="submit"
+              id="loginButton"
+              class="primary-button auth-submit"
+            >
+
+              <span class="button-text">
+                Sign in
+              </span>
+
+              <span class="button-loader hidden"></span>
+
+            </button>
+
+          </form>
+
+
+          <div class="auth-switch">
+
+            Don't have an account?
+
+            <button
+              type="button"
+              id="showRegisterButton"
+              class="text-button"
+            >
+              Create account
+            </button>
+
+          </div>
+
+        </div>
+
+
+        <!-- REGISTER FORM -->
+
+        <div id="registerForm" class="auth-form hidden">
+
+          <div class="auth-heading">
+
+            <span class="eyebrow">JOIN MIW</span>
+
+            <h2>Create your account</h2>
+
+            <p>
+              Start building your own digital identity.
+            </p>
+
+          </div>
+
+
+          <form id="registerFormElement">
+
+            <div class="form-group">
+
+              <label for="registerName">
+                Display name
+              </label>
+
+              <input
+                type="text"
+                id="registerName"
+                name="displayName"
+                placeholder="Your name"
+                maxlength="80"
+                autocomplete="name"
+                required
+              >
+
+            </div>
+
+
+            <div class="form-group">
+
+              <label for="registerEmail">
+                Email address
+              </label>
+
+              <input
+                type="email"
+                id="registerEmail"
+                name="email"
+                placeholder="name@example.com"
+                autocomplete="email"
+                required
+              >
+
+            </div>
+
+
+            <div class="form-group">
+
+              <label for="registerPassword">
+                Password
+              </label>
+
+              <div class="password-wrapper">
+
+                <input
+                  type="password"
+                  id="registerPassword"
+                  name="password"
+                  placeholder="Minimum 8 characters"
+                  minlength="8"
+                  autocomplete="new-password"
+                  required
+                >
+
+                <button
+                  type="button"
+                  class="password-toggle"
+                  data-password-target="registerPassword"
+                  aria-label="Show password"
+                >
+                  Show
+                </button>
+
+              </div>
+
+            </div>
+
+
+            <div
+              id="registerError"
+              class="form-message error-message hidden"
+              role="alert"
+            ></div>
+
+
+            <div
+              id="registerSuccess"
+              class="form-message success-message hidden"
+              role="status"
+            ></div>
+
+
+            <button
+              type="submit"
+              id="registerButton"
+              class="primary-button auth-submit"
+            >
+
+              <span class="button-text">
+                Create account
+              </span>
+
+              <span class="button-loader hidden"></span>
+
+            </button>
+
+          </form>
+
+
+          <div class="auth-switch">
+
+            Already have an account?
+
+            <button
+              type="button"
+              id="showLoginButton"
+              class="text-button"
+            >
+              Sign in
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <!-- =====================================================
+       MAIN APPLICATION
+  ====================================================== -->
+
+  <main id="appScreen" class="app-screen hidden">
+
+
+    <!-- SIDEBAR -->
+
+    <aside id="sidebar" class="sidebar">
+
+
+      <!-- SIDEBAR HEADER -->
+
+      <div class="sidebar-header">
+
+        <div class="sidebar-brand">
+
+          <div class="miw-logo small-logo">M</div>
+
+          <div class="sidebar-brand-text">
+
+            <strong>MIW</strong>
+
+            <span>Messenger</span>
+
+          </div>
+
+        </div>
+
+
+        <button
+          type="button"
+          id="mobileCloseSidebar"
+          class="icon-button mobile-only"
+          aria-label="Close sidebar"
+        >
+          ✕
+        </button>
+
+      </div>
+
+
+      <!-- CURRENT USER -->
+
+      <button
+        type="button"
+        id="currentUserButton"
+        class="current-user-card"
+      >
+
+        <div class="avatar avatar-medium">
+
+          <img
+            id="sidebarUserPhoto"
+            class="hidden"
+            alt="Profile photo"
+          >
+
+          <span id="sidebarUserInitial">U</span>
+
+        </div>
+
+
+        <div class="current-user-info">
+
+          <strong id="sidebarUserName">
+            User
+          </strong>
+
+          <span id="sidebarUserMiwId">
+            MIW-XXXX-XXXX-XXXX
+          </span>
+
+        </div>
+
+
+        <span class="online-indicator"></span>
+
+      </button>
+
+
+      <!-- SIDEBAR SEARCH -->
+
+      <div class="sidebar-search">
+
+        <span class="search-icon">⌕</span>
+
+        <input
+          type="search"
+          id="globalSearch"
+          placeholder="Search MIW..."
+          autocomplete="off"
+        >
+
+        <kbd>⌘ K</kbd>
+
+      </div>
+
+
+      <!-- MAIN NAVIGATION -->
+
+      <nav class="sidebar-navigation">
+
+        <span class="nav-section-title">
+          WORKSPACE
+        </span>
+
+
+        <button
+          type="button"
+          class="nav-item active"
+          data-view="chats"
+        >
+
+          <span class="nav-icon">◫</span>
+
+          <span>Messages</span>
+
+          <span
+            id="unreadBadge"
+            class="nav-badge hidden"
+          >
+            0
+          </span>
+
+        </button>
+
+
+        <button
+          type="button"
+          class="nav-item"
+          data-view="contacts"
+        >
+
+          <span class="nav-icon">♙</span>
+
+          <span>Contacts</span>
+
+        </button>
+
+
+        <button
+          type="button"
+          class="nav-item"
+          data-view="groups"
+        >
+
+          <span class="nav-icon">♧</span>
+
+          <span>Groups</span>
+
+        </button>
+
+
+        <button
+          type="button"
+          class="nav-item"
+          data-view="communities"
+        >
+
+          <span class="nav-icon">◎</span>
+
+          <span>Communities</span>
+
+        </button>
+
+
+        <span class="nav-section-title nav-section-spaced">
+          PERSONAL
+        </span>
+
+
+        <button
+          type="button"
+          class="nav-item"
+          data-view="drive"
+        >
+
+          <span class="nav-icon">▱</span>
+
+          <span>MIW Drive</span>
+
+        </button>
+
+
+        <button
+          type="button"
+          class="nav-item"
+          data-view="profile"
+        >
+
+          <span class="nav-icon">♙</span>
+
+          <span>My Profile</span>
+
+        </button>
+
+      </nav>
+
+
+      <!-- SIDEBAR FOOTER -->
+
+      <div class="sidebar-footer">
+
+        <button
+          type="button"
+          id="settingsButton"
+          class="nav-item"
+          data-view="settings"
+        >
+
+          <span class="nav-icon">⚙</span>
+
+          <span>Settings</span>
+
+        </button>
+
+
+        <button
+          type="button"
+          id="logoutButton"
+          class="nav-item logout-item"
+        >
+
+          <span class="nav-icon">↪</span>
+
+          <span>Sign out</span>
+
+        </button>
+
+
+        <div class="sidebar-version">
+          MIW Messenger v2.0.0
+        </div>
+
+      </div>
+
+    </aside>
+
+
+    <!-- SIDEBAR BACKDROP -->
+
+    <div
+      id="sidebarBackdrop"
+      class="sidebar-backdrop hidden"
+    ></div>
+
+
+    <!-- =================================================
+         CONTENT AREA
+    ================================================== -->
+
+    <section class="main-content">
+
+
+      <!-- TOPBAR -->
+
+      <header class="topbar">
+
+        <div class="topbar-left">
+
+          <button
+            type="button"
+            id="mobileMenuButton"
+            class="icon-button mobile-only"
+            aria-label="Open menu"
+          >
+            ☰
+          </button>
+
+
+          <div class="breadcrumb">
+
+            <span>MIW</span>
+
+            <span class="breadcrumb-separator">/</span>
+
+            <strong id="currentPageTitle">
+              Messages
+            </strong>
+
+          </div>
+
+        </div>
+
+
+        <div class="topbar-actions">
+
+          <div
+            id="connectionStatus"
+            class="connection-status"
+          >
+
+            <span class="connection-dot"></span>
+
+            <span id="connectionText">
+              Connected
+            </span>
+
+          </div>
+
+
+          <button
+            type="button"
+            id="themeButton"
+            class="icon-button"
+            aria-label="Change theme"
+            title="Change theme"
+          >
+            ◐
+          </button>
+
+
+          <button
+            type="button"
+            id="topbarProfileButton"
+            class="avatar avatar-small"
+            aria-label="My profile"
+          >
+
+            <img
+              id="topbarUserPhoto"
+              class="hidden"
+              alt="Profile photo"
+            >
+
+            <span id="topbarUserInitial">U</span>
+
+          </button>
+
+        </div>
+
+      </header>
+
+
+      <!-- =================================================
+           VIEW CONTAINER
+      ================================================== -->
+
+      <div id="viewContainer" class="view-container">
+
+
+        <!-- ===============================================
+             MESSAGES VIEW
+        ================================================ -->
+
+        <section
+          id="chatsView"
+          class="workspace-view chats-view"
+        >
+
+
+          <!-- CHAT LIST PANEL -->
+
+          <div class="chat-list-panel">
+
+
+            <div class="panel-heading">
+
+              <div>
+
+                <span class="eyebrow">
+                  YOUR WORKSPACE
+                </span>
+
+                <h2>Messages</h2>
+
+                <p>Your conversations in one place.</p>
+
+              </div>
+
+
+              <button
+                type="button"
+                id="newChatButton"
+                class="primary-icon-button"
+                title="New conversation"
+              >
+                +
+              </button>
+
+            </div>
+
+
+            <!-- CHAT FILTER -->
+
+            <div class="chat-filters">
+
+              <button
+                type="button"
+                class="filter-button active"
+                data-chat-filter="all"
+              >
+                All
+              </button>
+
+              <button
+                type="button"
+                class="filter-button"
+                data-chat-filter="unread"
+              >
+                Unread
+              </button>
+
+              <button
+                type="button"
+                class="filter-button"
+                data-chat-filter="groups"
+              >
+                Groups
+              </button>
+
+            </div>
+
+
+            <!-- CHAT SEARCH -->
+
+            <div class="chat-search">
+
+              <input
+                type="search"
+                id="chatSearch"
+                placeholder="Search conversations..."
+              >
+
+            </div>
+
+
+            <!-- CHAT LIST -->
+
+            <div
+              id="conversationList"
+              class="conversation-list"
+            >
+
+              <div class="empty-list-state">
+
+                <div class="empty-state-icon">◫</div>
+
+                <h3>No conversations yet</h3>
+
+                <p>
+                  Start a conversation with someone on MIW.
+                </p>
+
+              </div>
+
+            </div>
+
+
+          </div>
+
+
+          <!-- CONVERSATION PANEL -->
+
+          <div class="conversation-panel">
+
+
+            <!-- EMPTY CONVERSATION -->
+
+            <div
+              id="emptyConversation"
+              class="empty-conversation"
+            >
+
+              <div class="empty-conversation-content">
+
+                <div class="empty-chat-icon">
+                  <span>✉</span>
+                </div>
+
+                <h2>Your messages, your space.</h2>
+
+                <p>
+                  Select a conversation or start a new one
+                  to connect with people.
+                </p>
+
+                <button
+                  type="button"
+                  id="emptyNewChatButton"
+                  class="primary-button"
+                >
+                  Start a conversation
+                </button>
+
+              </div>
+
+            </div>
+
+
+            <!-- ACTIVE CONVERSATION -->
+
+            <div
+              id="activeConversation"
+              class="active-conversation hidden"
+            >
+
+
+              <!-- CHAT HEADER -->
+
+              <header class="chat-header">
+
+                <div class="chat-header-left">
+
+                  <button
+                    type="button"
+                    id="backToChatsButton"
+                    class="icon-button mobile-only"
+                    aria-label="Back to conversations"
+                  >
+                    ←
+                  </button>
+
+
+                  <div class="avatar avatar-medium">
+
+                    <img
+                      id="chatHeaderPhoto"
+                      class="hidden"
+                      alt="Conversation avatar"
+                    >
+
+                    <span id="chatHeaderInitial">C</span>
+
+                  </div>
+
+
+                  <div class="chat-header-info">
+
+                    <h3 id="chatHeaderName">
+                      Conversation
+                    </h3>
+
+                    <span id="chatHeaderSubtitle">
+                      MIW Messenger
+                    </span>
+
+                  </div>
+
+                </div>
+
+
+                <div class="chat-header-actions">
+
+                  <button
+                    type="button"
+                    id="chatInfoButton"
+                    class="icon-button"
+                    title="Conversation information"
+                  >
+                    ⓘ
+                  </button>
+
+                  <button
+                    type="button"
+                    id="chatMoreButton"
+                    class="icon-button"
+                    title="More options"
+                  >
+                    ⋯
+                  </button>
+
+                </div>
+
+              </header>
+
+
+              <!-- MESSAGE HISTORY -->
+
+              <div
+                id="messageContainer"
+                class="message-container"
+              >
+
+                <div
+                  id="messageLoading"
+                  class="message-loading hidden"
+                >
+                  Loading messages...
+                </div>
+
+
+                <button
+                  type="button"
+                  id="loadOlderMessagesButton"
+                  class="load-older-button hidden"
+                >
+                  Load older messages
+                </button>
+
+
+                <div
+                  id="messageList"
+                  class="message-list"
+                ></div>
+
+
+                <div
+                  id="messageEmptyState"
+                  class="message-empty-state hidden"
+                >
+
+                  <div>✉</div>
+
+                  <p>
+                    This is the beginning of your conversation.
+                  </p>
+
+                </div>
+
+              </div>
+
+
+              <!-- REPLY PREVIEW -->
+
+              <div
+                id="replyPreview"
+                class="reply-preview hidden"
+              >
+
+                <div class="reply-preview-content">
+
+                  <span>Replying to</span>
+
+                  <strong id="replyPreviewName">
+                    User
+                  </strong>
+
+                  <p id="replyPreviewText">
+                    Message preview
+                  </p>
+
+                </div>
+
+
+                <button
+                  type="button"
+                  id="cancelReplyButton"
+                  class="icon-button"
+                  aria-label="Cancel reply"
+                >
+                  ✕
+                </button>
+
+              </div>
+
+
+              <!-- MESSAGE COMPOSER -->
+
+              <form
+                id="messageForm"
+                class="message-composer"
+              >
+
+                <div class="composer-toolbar">
+
+                  <button
+                    type="button"
+                    id="emojiButton"
+                    class="composer-tool"
+                    title="Emoji"
+                  >
+                    ☺
+                  </button>
+
+
+                  <button
+                    type="button"
+                    id="attachmentButton"
+                    class="composer-tool"
+                    title="Attach file"
+                  >
+                    ＋
+                  </button>
+
+
+                  <input
+                    type="file"
+                    id="attachmentInput"
+                    class="hidden"
+                  >
+
+                </div>
+
+
+                <div class="composer-input-wrapper">
+
+                  <textarea
+                    id="messageInput"
+                    rows="1"
+                    maxlength="5000"
+                    placeholder="Write a message..."
+                  ></textarea>
+
+                  <div class="composer-bottom">
+
+                    <span class="composer-hint">
+                      Press Enter to send
+                    </span>
+
+                    <button
+                      type="submit"
+                      id="sendMessageButton"
+                      class="send-button"
+                      aria-label="Send message"
+                    >
+                      ↑
+                    </button>
+
+                  </div>
+
+                </div>
+
+              </form>
+
+
+              <!-- EMOJI PICKER -->
+
+              <div
+                id="emojiPicker"
+                class="emoji-picker hidden"
+              >
+
+                <div class="emoji-picker-header">
+                  Frequently used
+                </div>
+
+                <div class="emoji-grid">
+
+                  <button type="button">😀</button>
+                  <button type="button">😂</button>
+                  <button type="button">🥰</button>
+                  <button type="button">😍</button>
+                  <button type="button">😊</button>
+                  <button type="button">😎</button>
+                  <button type="button">😭</button>
+                  <button type="button">😅</button>
+                  <button type="button">👍</button>
+                  <button type="button">👏</button>
+                  <button type="button">🙏</button>
+                  <button type="button">❤️</button>
+                  <button type="button">🔥</button>
+                  <button type="button">✨</button>
+                  <button type="button">🎉</button>
+                  <button type="button">🚀</button>
+                  <button type="button">💯</button>
+                  <button type="button">🤝</button>
+
+                </div>
+
+              </div>
+
+
+            </div>
+
+          </div>
+
+
+        </section>
+
+
+        <!-- ===============================================
+             CONTACTS VIEW
+        ================================================ -->
+
+        <section
+          id="contactsView"
+          class="workspace-view standard-view hidden"
+        >
+
+          <div class="page-heading">
+
+            <div>
+              <span class="eyebrow">YOUR NETWORK</span>
+              <h2>Contacts</h2>
+              <p>Manage your MIW connections.</p>
+            </div>
+
+            <button
+              type="button"
+              id="addContactButton"
+              class="primary-button"
+            >
+              + Add contact
+            </button>
+
+          </div>
+
+
+          <div class="content-card">
+
+            <input
+              type="search"
+              id="contactSearch"
+              class="full-search"
+              placeholder="Search contacts or MIW ID..."
+            >
+
+            <div
+              id="contactList"
+              class="entity-list"
+            ></div>
+
+          </div>
+
+        </section>
+
+
+        <!-- ===============================================
+             GROUPS VIEW
+        ================================================ -->
+
+        <section
+          id="groupsView"
+          class="workspace-view standard-view hidden"
+        >
+
+          <div class="page-heading">
+
+            <div>
+              <span class="eyebrow">COLLABORATION</span>
+              <h2>Groups</h2>
+              <p>Bring people together in one conversation.</p>
+            </div>
+
+            <button
+              type="button"
+              id="createGroupButton"
+              class="primary-button"
+            >
+              + Create group
+            </button>
+
+          </div>
+
+
+          <div
+            id="groupList"
+            class="entity-grid"
+          ></div>
+
+        </section>
+
+
+        <!-- ===============================================
+             COMMUNITIES VIEW
+        ================================================ -->
+
+        <section
+          id="communitiesView"
+          class="workspace-view standard-view hidden"
+        >
+
+          <div class="page-heading">
+
+            <div>
+              <span class="eyebrow">MIW NETWORK</span>
+              <h2>Communities</h2>
+              <p>Discover and manage your communities.</p>
+            </div>
+
+            <button
+              type="button"
+              id="createCommunityButton"
+              class="primary-button"
+            >
+              + Create community
+            </button>
+
+          </div>
+
+
+          <div
+            id="communityList"
+            class="entity-grid"
+          ></div>
+
+        </section>
+
+
+        <!-- ===============================================
+             DRIVE VIEW
+        ================================================ -->
+
+        <section
+          id="driveView"
+          class="workspace-view standard-view hidden"
+        >
+
+          <div class="page-heading">
+
+            <div>
+              <span class="eyebrow">CLOUD STORAGE</span>
+              <h2>MIW Drive</h2>
+              <p>Your personal file storage.</p>
+            </div>
+
+            <button
+              type="button"
+              id="uploadDriveButton"
+              class="primary-button"
+            >
+              ↑ Upload file
+            </button>
+
+            <input
+              type="file"
+              id="driveFileInput"
+              class="hidden"
+            >
+
+          </div>
+
+
+          <div class="storage-summary">
+
+            <div class="storage-icon">▱</div>
+
+            <div>
+
+              <strong id="storageFileCount">0 files</strong>
+
+              <span id="storageUsed">
+                0 Bytes used
+              </span>
+
+            </div>
+
+          </div>
+
+
+          <div
+            id="driveFileList"
+            class="drive-file-list"
+          ></div>
+
+        </section>
+
+
+        <!-- ===============================================
+             PROFILE VIEW
+        ================================================ -->
+
+        <section
+          id="profileView"
+          class="workspace-view standard-view hidden"
+        >
+
+          <div class="page-heading">
+
+            <div>
+              <span class="eyebrow">PERSONAL ACCOUNT</span>
+              <h2>My Profile</h2>
+              <p>Manage your MIW identity.</p>
+            </div>
+
+          </div>
+
+
+          <div class="profile-layout">
+
+            <div class="profile-card">
+
+              <div class="profile-avatar-large">
+
+                <img
+                  id="profilePhoto"
+                  class="hidden"
+                  alt="Profile photo"
+                >
+
+                <span id="profileInitial">U</span>
+
+              </div>
+
+
+              <h2 id="profileDisplayName">
+                User
+              </h2>
+
+              <span
+                id="profileMiwId"
+                class="miw-id-label"
+              >
+                MIW-XXXX-XXXX-XXXX
+              </span>
+
+              <p id="profileBio">
+                No bio available.
+              </p>
+
+            </div>
+
+
+            <div class="content-card profile-edit-card">
+
+              <h3>Edit profile</h3>
+
+
+              <form id="profileForm">
+
+                <div class="form-group">
+
+                  <label for="profileNameInput">
+                    Display name
+                  </label>
+
+                  <input
+                    id="profileNameInput"
+                    type="text"
+                    maxlength="80"
+                    required
+                  >
+
+                </div>
+
+
+                <div class="form-group">
+
+                  <label for="profileBioInput">
+                    Bio
+                  </label>
+
+                  <textarea
+                    id="profileBioInput"
+                    rows="4"
+                    maxlength="500"
+                    placeholder="Tell people about yourself..."
+                  ></textarea>
+
+                </div>
+
+
+                <div class="form-group">
+
+                  <label for="profilePhotoInput">
+                    Profile photo
+                  </label>
+
+                  <input
+                    id="profilePhotoInput"
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                  >
+
+                  <small>
+                    Maximum size: 2 MB.
+                  </small>
+
+                </div>
+
+
+                <button
+                  type="submit"
+                  class="primary-button"
+                >
+                  Save changes
+                </button>
+
+              </form>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+        <!-- ===============================================
+             SETTINGS VIEW
+        ================================================ -->
+
+        <section
+          id="settingsView"
+          class="workspace-view standard-view hidden"
+        >
+
+          <div class="page-heading">
+
+            <div>
+              <span class="eyebrow">PREFERENCES</span>
+              <h2>Settings</h2>
+              <p>Customize your MIW experience.</p>
+            </div>
+
+          </div>
+
+
+          <div class="settings-layout">
+
+
+            <div class="content-card">
+
+              <h3>Appearance</h3>
+
+              <p>
+                Choose how MIW looks on your device.
+              </p>
+
+
+              <div class="theme-options">
+
+                <button
+                  type="button"
+                  class="theme-option"
+                  data-theme-choice="light"
+                >
+
+                  <span>☀</span>
+
+                  <strong>Light</strong>
+
+                </button>
+
+
+                <button
+                  type="button"
+                  class="theme-option"
+                  data-theme-choice="dark"
+                >
+
+                  <span>☾</span>
+
+                  <strong>Dark</strong>
+
+                </button>
+
+
+                <button
+                  type="button"
+                  class="theme-option active"
+                  data-theme-choice="system"
+                >
+
+                  <span>◐</span>
+
+                  <strong>System</strong>
+
+                </button>
+
+              </div>
+
+            </div>
+
+
+            <div class="content-card">
+
+              <h3>Account security</h3>
+
+              <p>
+                Keep your account secure.
+              </p>
+
+              <button
+                type="button"
+                id="changePasswordButton"
+                class="secondary-button"
+              >
+                Change password
+              </button>
+
+            </div>
+
+
+            <div class="content-card">
+
+              <h3>About MIW</h3>
+
+              <p>
+                MIW Messenger v2.0.0
+              </p>
+
+              <p>
+                Your conversations. Your identity. Your space.
+              </p>
+
+            </div>
+
+          </div>
+
+        </section>
+
+
+      </div>
+
+    </section>
+
+
+  </main>
+
+
+  <!-- =====================================================
+       GLOBAL MODAL
+  ====================================================== -->
+
+  <div
+    id="modalBackdrop"
+    class="modal-backdrop hidden"
+  >
+
+    <div
+      id="globalModal"
+      class="modal-container"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modalTitle"
+    >
+
+      <div class="modal-header">
+
+        <h3 id="modalTitle">
+          MIW
+        </h3>
+
+        <button
+          type="button"
+          id="closeModalButton"
+          class="icon-button"
+          aria-label="Close modal"
+        >
+          ✕
+        </button>
+
+      </div>
+
+
+      <div
+        id="modalContent"
+        class="modal-content"
+      ></div>
+
+
+      <div
+        id="modalActions"
+        class="modal-actions"
+      ></div>
+
+    </div>
+
+  </div>
+
+
+  <!-- =====================================================
+       TOAST NOTIFICATIONS
+  ====================================================== -->
+
+  <div
+    id="toastContainer"
+    class="toast-container"
+    aria-live="polite"
+    aria-atomic="true"
+  ></div>
+
+
+  <!-- =====================================================
+       COMPONENTS
+  ====================================================== -->
+
+  <?!= include('Components'); ?>
+
+
+  <!-- =====================================================
+       CLIENT JAVASCRIPT
+  ====================================================== -->
+
+  <?!= include('Client'); ?>
+
+
+</body>
+
+</html>
